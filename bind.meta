@@ -1,0 +1,16 @@
+;;; bind.meta -*- Scheme -*-
+
+((synopsis "Automatically generate bindings from C/C++ declarations")
+ (category ffi)
+ (license "public domain")
+ (needs silex matchable coops)
+ (doc-from-wiki #t)
+ (author "[[felix winkelmann]]")
+ (files "bind.scm"
+	"bind-translator.scm"
+	"chicken-bind.scm"
+	"c.l"
+	"tests"
+	"runsilex.scm"
+        "bind.setup"))
+
