@@ -111,6 +111,7 @@ EOF
 
 ;;; 
 
+#|
  (define mbstowcs (foreign-lambda int "mbstowcs" nonnull-u32vector c-string int))
 
  (define (str->ustr str)
@@ -130,6 +131,7 @@ EOF
  )
 
  (foo2 "this is a test!")
+|#
 
 ;;;
 

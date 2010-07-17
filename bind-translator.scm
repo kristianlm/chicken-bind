@@ -1177,15 +1177,17 @@
 	(cdr a)
 	(string->symbol (string-append "<" (->string (fix-name str #f)) ">")) ) ) )
 
-(define (parse-easy-ffi text rename)
+(define (parse-easy-ffi text rename #!optional chunkify-only)
   (lexer-init 'string text)
   (set! processed-output '())
   (set! pp-conditional-stack '())
   (set! pp-process #t)
   (let ((chunks (chunkify)))
-    (fluid-let ((rename-function rename))
-      (for-each parse chunks)
-      (reverse processed-output))))
+    (if chunkify-only
+	chunks
+	(fluid-let ((rename-function rename))
+	  (for-each parse chunks)
+	  (reverse processed-output)))))
 
 (define (parse-easy-ffi-rec port)
   (lexer-init 'port port)

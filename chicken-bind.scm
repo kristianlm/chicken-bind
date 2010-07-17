@@ -19,6 +19,7 @@ usage: chicken-bind [OPTION | FILENAME ...]
   -full-specialization       specialize methods on all arguments
   -default-renaming PREFIX   use default renaming rules
   -follow-include    recursively process #include'd files
+  -parse             just emit parsed "chunks" of tokens
 
 Reads C/C++ files and generates Scheme wrapper code.
 Specifying "-" as filename reads from stdin.
@@ -27,14 +28,15 @@ EOF
 
 (define (main args)
   (let ((files '())
+	(chunkify-only #f)
 	(output #f))
-    (let loop ((arg args))
+    (let loop ((args args))
       (unless (null? args)
 	(let ((arg (car args))
 	      (rest (cdr args)))
 	  (cond ((string=? "-debug" arg)
 		 (set! ##compiler#debugging-chicken '(C))
-		 #f)
+		 (loop rest))
 		((string=? "-export-constants" arg)
 		 (set-bind-options export-constants: #t)
 		 (loop rest))
@@ -59,6 +61,9 @@ EOF
 		 (when (null? rest) (usage 1))
 		 (set! output (car rest))
 		 (loop (cdr rest)))
+		((string=? "-parse" arg)
+		 (set! chunkify-only #t)
+		 (loop rest))
 		((member arg '("--help" "-help" "-h"))
 		 (usage 0) )
 		((and (> (string-length arg) 1)
@@ -80,7 +85,8 @@ EOF
 		    (if (string=? f "-") 
 			(current-input-port)
 			f) )
-		   identity)))
+		   identity
+		   chunkify-only)))
 	 (print "\n;;; END OF FILE"))
        (cond ((equal? "-" output) (process))
 	     ((port? output)
