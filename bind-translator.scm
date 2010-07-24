@@ -1,4 +1,4 @@
-!;;;; bind-translator.scm
+;;;; bind-translator.scm
 
 
 (declare
