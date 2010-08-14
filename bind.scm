@@ -5,6 +5,7 @@
 	      bind*
 	      bind-type 
 	      bind-file
+	      bind-file*
 	      bind-opaque-type
 	      bind-rename
 	      bind-rename/pattern
