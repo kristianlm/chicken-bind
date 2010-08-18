@@ -3,7 +3,7 @@
 
 (define ##compiler#debugging-chicken '())
 
-(require-extension srfi-1 utils bind-translator extras)
+(require-extension srfi-1 utils bind-translator extras regex)
 
 (define (usage #!optional (status 0))
   (print #<<EOF
@@ -15,6 +15,8 @@ usage: chicken-bind [OPTION | FILENAME ...]
   -export-constants  add toplevel definitions for constants
   -class-finalizers  use finalizers for class instances
   -mutable-fields    instance fields are mutable
+  -rename FROM:TO    define renaming rule
+  -rename-regex FROM:TO  define renaming rule for matching regular expression
   -prefix PREFIX     prefix to be used for names
   -full-specialization       specialize methods on all arguments
   -default-renaming PREFIX   use default renaming rules
@@ -57,6 +59,12 @@ EOF
 		 (unless (pair? rest) (usage 1))
 		 (set-bind-options prefix: (car rest))
 		 (loop (cdr rest)))
+		((or (string=? "-rename-regex" arg) (string=? "-rename" arg))
+		 (unless (pair? rest) (usage 1))
+		 (let ((m (string-match "([^:]+):(.+)" (cadr arg))))
+		   (if m
+		       (set-renaming (cadr m) (caddr m) regex: (string=? "-rename-regex" arg))
+		       (usage 1))))
 		((string=? "-o" arg)
 		 (when (null? rest) (usage 1))
 		 (set! output (car rest))
