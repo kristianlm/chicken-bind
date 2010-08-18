@@ -25,15 +25,15 @@
  'bind
  '("bind.so" "bind.import.so"
    "bind-translator.so" "bind-translator.import.so")
- '((version 0.3.1)))
+ '((version 0.4)))
 
 (install-extension
  'cplusplus-object
  '("cplusplus-object.so" "cplusplus-object.import.so")
- '((version 0.3.1)))
+ '((version 0.4)))
 
 (install-program
  'chicken-bind
  "chicken-bind"
- '((version 0.3.1)))
+ '((version 0.4)))
 

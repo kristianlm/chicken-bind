@@ -10,7 +10,7 @@
 usage: chicken-bind [OPTION | FILENAME ...]
 
   -help              show this message
-  -o FILENAME        where to write generated code to
+  -o FILENAME        where to write generated code to ("-" means stdout)
   -debug             generate additional debug output
   -export-constants  add toplevel definitions for constants
   -class-finalizers  use finalizers for class instances
@@ -61,7 +61,7 @@ EOF
 		 (loop (cdr rest)))
 		((or (string=? "-rename-regex" arg) (string=? "-rename" arg))
 		 (unless (pair? rest) (usage 1))
-		 (let ((m (string-match "([^:]+):(.+)" (cadr arg))))
+		 (let ((m (string-match "([^:]+):(.+)" (cadr args))))
 		   (if m
 		       (set-renaming (cadr m) (caddr m) regex: (string=? "-rename-regex" arg))
 		       (usage 1))))
