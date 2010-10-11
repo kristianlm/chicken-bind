@@ -269,6 +269,7 @@
     [`(scheme-value . ,more) (values 'scheme-object more)]
     [`(scheme-pointer . ,more) (values 'scheme-pointer more)]
     [`(byte-vector . ,more) (values 'byte-vector more)]
+    [`(pointer-vector . ,more) (values 'pointer-vector more)]
     [`(fixnum . ,more) (values 'int more)]
     [`(pointer unsigned short int star . ,more) (values '(c-pointer unsigned-short) more)]
     [`(pointer unsigned long int star . ,more) (values '(c-pointer unsigned-long) more)]
@@ -1099,6 +1100,7 @@
       [(pointer nonnull-pointer c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer)
        (str "void *")]
       [(byte-vector nonnull-byte-vector u8vector nonnull-u8vector) (str "unsigned char *")]
+      ((pointer-vector nonnull-pointer-vector) (str "void **"))
       [(u16vector nonnull-u16vector) (str "unsigned short *")]
       [(s8vector nonnull-s8vector) (str "char *")]
       [(u32vector nonnull-u32vector) (str "unsigned int *")]

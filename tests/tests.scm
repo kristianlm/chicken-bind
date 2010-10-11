@@ -75,7 +75,8 @@ EOF
 (bind* "int32_t one_two_three(___inout double *d) { return (int)*d; }")
 
 (assert (equal? '(22 22.3) (receive (bar 22.3))))
-(assert (equal? #\x16 (two 22.5)))
+(two 22.5)
+(assert (= #x16 (two 22.5)))
 
 ;;; ___out
 

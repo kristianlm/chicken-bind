@@ -45,12 +45,17 @@ space     [ ]
 "___number"                         'number
 "___symbol"                         'symbol
 "___bool"                           'bool
+"___pointer_vector"                  'pointer-vector
 "___pointer"                       'pointer
 "___u32"                           'u32
 "___s32"                           's32
 "___s64"                           's64
 "int64_t"                          's64
 "__int64"                          's64
+"int32_t"                          's32
+"__int32"                          's32
+"uint64_t"                         'u64
+"uint32_t"                         'u64
 "bool"                             'bool
 "___safe"                           'callback
 "___scheme_value"                   'scheme-value
