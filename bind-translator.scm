@@ -899,7 +899,7 @@
     (emit `(,(rename 'define-foreign-variable) ,tmp ,rtype ,sname))
     (if const
 	(emit `(,(rename 'define) ,name2 ,tmp))
-	(emit `(,(rename 'define) (,name2 . var)
+	(emit `(,(rename 'define) (,name2 . ,var)
 		(,(rename 'if) (,(rename 'pair?) ,var)
 		    (,(rename 'set!) ,tmp (##sys#slot ,var 0))
 		    ,tmp) )))))
