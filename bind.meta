@@ -3,7 +3,7 @@
 ((synopsis "Automatically generate bindings from C/C++ declarations")
  (category ffi)
  (license "public domain")
- (needs silex matchable coops)
+ (needs silex matchable coops regex)
  (doc-from-wiki #t)
  (author "[[felix winkelmann]]")
  (files "bind.scm"
