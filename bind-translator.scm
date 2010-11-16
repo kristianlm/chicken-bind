@@ -21,6 +21,9 @@
 
 (include "c.l.scm")
 
+(when (feature? 'csi)
+  (error "the `bind' extension can not be used in the interpreter"))
+
 (define mutable-fields #f)
 (define use-finalizers #f)
 (define exception-handler #f)
