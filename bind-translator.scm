@@ -197,6 +197,7 @@
 			(parse-easy-ffi-rec f) ) )
 		    (parsing-error "can not open include file" filename) ) ) ) ]
 	   [('pp-pragma . more) #f]
+	   (('using 'namespace ('id _) . more) #f)
 	   [_ (let ([cb #f] 
 		    [ab #f]
 		    [sp #f]
