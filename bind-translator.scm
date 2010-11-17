@@ -19,10 +19,13 @@
 (import scheme chicken)
 (use extras data-structures files ports silex srfi-13 srfi-1 utils regex matchable)
 
+(define-syntax (tok x r c)
+  `(,(r 'cons) ,(cadr x) yyline))
+
 (include "c.l.scm")
 
 (when (feature? 'csi)
-  (error "the `bind' extension can not be used in the interpreter"))
+  (error "the `bind' extension can only be used in compiled code"))
 
 (define mutable-fields #f)
 (define use-finalizers #f)
@@ -47,17 +50,22 @@
 (define abstract-classes '())
 (define full-specialization #f)
 (define defined-enums '())
-(define parsing-error error)
 (define imported-headers '())
 (define no-c-syntax-checks #f)
 (define rename-function identity)
+(define input-filename #f)
 
 (unless (or (memq #:compiling ##sys#features) (memq #:compiler-extension ##sys#features))
   (set! ##compiler#foreign-type-table (make-vector 301 '())) )
 
+(define (parsing-error arg1 . more)
+  (if (number? arg1)
+      (apply error (sprintf "~a:~a: ~a" input-filename arg1 (car more)) (cdr more))
+      (apply error arg1 more)))
+
 (define (lexer-error chr)
   (parsing-error
-   (sprintf "FFI lexer error: illegal character: `~c' (code ~s)" chr (char->integer chr))) )
+   (sprintf "lexer error: illegal character: `~c' (code ~s)" chr (char->integer chr))) )
 
 (define (rename s)
   (rename-function s))
@@ -70,14 +78,14 @@
     (let rec ([scope 0])
       (let ([chunks '()])
 	(let loop ([mode #f] [tokens '()])
-	  (let ([t (lexer)])
+	  (match-let (((t . ln) (lexer)))
 	    (case t
 	      [(stop)
 	       (when (not (zero? iparts))
-		 (parsing-error "unbalanced `@interface'/`@implementation'") )
+		 (parsing-error ln "unbalanced `@interface'/`@implementation'") )
 	       (case mode
 		 ((interface implementation)
-		  (parsing-error "missing `@end' declaration") ) )
+		  (parsing-error ln "missing `@end' declaration") ) )
 	       (reverse (cons (reverse tokens) chunks)) ]
 	      [(pp-end)
 	       (when (pair? tokens)
@@ -87,7 +95,7 @@
 			  pp-pragma pp-error)
 	       (loop 'pp (list t)) ]
 	      [(close-curly)
-	       (cond [(not (positive? scope)) (parsing-error "`}' out of context")]
+	       (cond [(not (positive? scope)) (parsing-error ln "`}' out of context")]
 		     [(null? tokens) (reverse chunks)]
 		     [else (cons (reverse tokens) chunks)] ) ]
 	      [(open-curly)
@@ -104,7 +112,7 @@
 	       (loop 'declare '(declare)) ]
 	      [(interface implementation)
 	       (when (not (zero? iparts))
-		 (parsing-error "`@interface'/`@implementation' without matching `@end'") )
+		 (parsing-error ln "`@interface'/`@implementation' without matching `@end'") )
 	       (set! iparts (add1 iparts))
 	       (loop t (list t)) ]
 	      [(end)
@@ -113,7 +121,7 @@
 	       (loop #f '()) ]
 	      [(semicolon)
 	       (if mode
-		   (parsing-error "unexpected semicolon")
+		   (parsing-error ln "unexpected semicolon")
 		   (begin
 		     (set! chunks (cons (reverse tokens) chunks))
 		     (loop #f '()) ) ) ]
@@ -1187,21 +1195,23 @@
   (set! processed-output '())
   (set! pp-conditional-stack '())
   (set! pp-process #t)
-  (let ((chunks (chunkify)))
-    (if chunkify-only
-	chunks
-	(fluid-let ((rename-function rename))
-	  (for-each parse chunks)
-	  (reverse processed-output)))))
+  (fluid-let ((input-filename "<string>"))
+    (let ((chunks (chunkify)))
+      (if chunkify-only
+	  chunks
+	  (fluid-let ((rename-function rename))
+	    (for-each parse chunks)
+	    (reverse processed-output))))))
 
 (define (parse-easy-ffi-rec port)
   (lexer-init 'port port)
-  (let* ([output processed-output]
-	 [chunks (chunkify)] )
-    (set! processed-output '())
-    (for-each parse chunks)
-    (set! processed-output (append output processed-output)) ) )
-
+  (fluid-let ((input-filename (port-name port)))
+    (let* ([output processed-output]
+	   [chunks (chunkify)] )
+      (set! processed-output '())
+      (for-each parse chunks)
+      (set! processed-output (append output processed-output)) ) ))
+  
 (define (register-ffi-macro name)
   (set! macro-table (cons (list (string->symbol name) '* '()) macro-table)) )
 
@@ -1282,46 +1292,52 @@ EOF
   (unless no-c-syntax-checks
     (fluid-let ([parsing-error (check-syntax-error text)]
 		[syntax-check-location (optional loc #f)] )
-      (define (checkp p s)
-	(cond [(null? s) (parsing-error (sprintf "unbalanced parantheses - missing match to `~A'" p))]
+      (define (checkp ln p s)
+	(cond [(null? s) 
+	       (parsing-error ln (sprintf "unbalanced parantheses - missing match to `~A'" p))]
 	      [(not (eq? p (car s)))
-	       (parsing-error (sprintf "unbalanced parantheses - expected `~A', but found `~A'" p (car s))) ] ) )
-      (define (checkpp p s)
-	(cond [(null? s) (parsing-error (sprintf "unbalanced parantheses - missing match to `~A'" p))]
+	       (parsing-error
+		ln
+		(sprintf "unbalanced parantheses - expected `~A', but found `~A'" p (car s))) ] ) )
+      (define (checkpp ln p s)
+	(cond [(null? s) 
+	       (parsing-error ln (sprintf "unbalanced parantheses - missing match to `~A'" p))]
 	      [(not (equal? p (car s)))
-	       (parsing-error (sprintf "unbalanced preprocessor conditional - expected `~A', but found `~A'" p (car s))) ] ) )
+	       (parsing-error
+		ln 
+		(sprintf "unbalanced preprocessor conditional - expected `~A', but found `~A'" p (car s))) ] ) )
       (lexer-init 'string text)
       (set! pp-process #t)
       (let loop ([pstack '()] [ppstack '()])
-	(let ([t (lexer)])
+	(match-let (((t . ln) (lexer)))
 	  (case t
 	    [(stop)
 	     (when (pair? pstack)
-	       (parsing-error (sprintf "unbalanced parentheses - missing `~A'" (car pstack)) ))
+	       (parsing-error ln (sprintf "unbalanced parentheses - missing `~A'" (car pstack)) ))
 	     (when (pair? ppstack)
-	       (parsing-error (sprintf "unbalanced preprocessor command - missing `~A'" (car ppstack)) ) ) ]
+	       (parsing-error ln (sprintf "unbalanced preprocessor command - missing `~A'" (car ppstack)) ) ) ]
 	    [(pp-else)
-	     (checkpp "#endif" ppstack) 
+	     (checkpp ln "#endif" ppstack) 
 	     (loop pstack ppstack) ]
 	    [(pp-endif)
-	     (checkpp "#endif" ppstack) 
+	     (checkpp ln "#endif" ppstack) 
 	     (loop pstack (cdr ppstack)) ]
 	    [(pp-if pp-ifdef pp-ifndef)
 	     (loop pstack (cons "#endif" ppstack)) ]
 	    [(open-curly)
 	     (loop (cons #\} pstack) ppstack) ]
 	    [(close-curly)
-	     (checkp #\} pstack) 
+	     (checkp ln #\} pstack) 
 	     (loop (cdr pstack) ppstack) ]
 	    [(open-paren)
 	     (loop (cons #\) pstack) ppstack) ]
 	    [(close-paren)
-	     (checkp #\) pstack)
+	     (checkp ln #\) pstack)
 	     (loop (cdr pstack) ppstack) ] 
 	    [(open-bracket)
 	     (loop (cons #\] pstack) ppstack) ]
 	    [(close-bracket)
-	     (checkp #\] pstack)
+	     (checkp ln #\] pstack)
 	     (loop (cdr pstack) ppstack) ] 
 	    [else (loop pstack ppstack)] ) ) ) ) ) )
 
