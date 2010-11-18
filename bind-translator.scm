@@ -76,9 +76,11 @@
 (define (chunkify)
   (let ((iparts 0))
     (let rec ([scope 0])
-      (let ([chunks '()])
+      (let ([chunks '()]
+	    (cdebug (memq 'X ##compiler#debugging-chicken)))
 	(let loop ([mode #f] [tokens '()])
 	  (match-let (((t . ln) (lexer)))
+	    (when cdebug (pp t (current-error-port)))
 	    (case t
 	      [(stop)
 	       (when (not (zero? iparts))
@@ -119,9 +121,11 @@
 	       (set! iparts (sub1 iparts))
 	       (set! chunks (cons* '(end) (reverse tokens) chunks))
 	       (loop #f '()) ]
+	      ((using)
+	       (loop 'using '(using)))
 	      [(semicolon)
-	       (if mode
-		   (parsing-error ln "unexpected semicolon")
+	       (if (and mode (not (eq? mode 'using)))
+		   (parsing-error ln "unexpected semicolon" mode)
 		   (begin
 		     (set! chunks (cons (reverse tokens) chunks))
 		     (loop #f '()) ) ) ]
@@ -152,7 +156,7 @@
      (set! pp-process (and pp-process (not (assq (string->symbol name) macro-table))))
      (set! pp-conditional-stack (cons pp-process pp-conditional-stack)) ]
     [('pp-if . _)
-     (warning "preprocessor conditional `~A' ignored (assuming false)" c)
+     (warning "preprocessor conditional `#if' ignored (assuming false)")
      (set! pp-process #f)
      (set! pp-conditional-stack (cons #f pp-conditional-stack)) ]
     [_ (when pp-process
@@ -419,6 +423,9 @@
 	       [_ #f])
 	     (let-values ([(type more) (parse-type more io #f)])
 	       (match more
+		 ((('id str) '(op "=") ('num _) . more)
+		  (index! str i lens)
+		  (rec more (cons type args) (cons io inout) (add1 i) lens))
 		 [(('id str) 'comma . more)
 		  (index! str i lens)
 		  (rec more (cons type args) (cons io inout) (add1 i) lens) ]
@@ -1246,6 +1253,7 @@
       ['s32vector '<s32vector>]
       ['f32vector '<f32vector>]
       ['f64vector '<f64vector>]
+      (('template . _) '<pointer>)
       [(? symbol?)
        (let ([a (##sys#hash-table-ref ##compiler#foreign-type-table ftype)])
 	 (if a

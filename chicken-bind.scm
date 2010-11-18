@@ -37,7 +37,7 @@ EOF
 	(let ((arg (car args))
 	      (rest (cdr args)))
 	  (cond ((string=? "-debug" arg)
-		 (set! ##compiler#debugging-chicken '(C))
+		 (set! ##compiler#debugging-chicken '(C X))
 		 (loop rest))
 		((string=? "-export-constants" arg)
 		 (set-bind-options export-constants: #t)
