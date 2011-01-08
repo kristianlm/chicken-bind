@@ -6,7 +6,7 @@
 class Foo {
   char *name_;
 public:
-  Foo(char *name) { name_ = name; }
+  Foo(char *name) { name_ = strdup(name); }
   ~Foo() {}
   char *name() { return name_; }
   Foo *bar(Foo *x) { return x; }

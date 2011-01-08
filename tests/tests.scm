@@ -136,7 +136,7 @@ EOF
 
 ;;;
 
- (bind-opaque-type myfile (pointer "FILE"))
+ (bind-opaque-type myfile (c-pointer "FILE"))
 
  (bind "myfile fopen(char *, char *);")
 

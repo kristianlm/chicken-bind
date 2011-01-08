@@ -256,10 +256,10 @@
        (values `(const ,t0) more) ) ]
     [('unsigned t 'star . more)
      (let-values ([(t0 more) (parse-type-rec (cons* 'unsigned t more))])
-       (values `(pointer ,t0) more) ) ]
+       (values `(c-pointer ,t0) more) ) ]
     [('signed t 'star . more)
      (let-values ([(t0 more) (parse-type-rec (cons* 'signed t more))])
-       (values `(pointer ,t0) more) ) ]
+       (values `(c-pointer ,t0) more) ) ]
     [(t ('op "<") . more)
      (let*-values ([(ts more) (parse-typelist more)]
 		   [(t0 _) (parse-type-rec (list t))] )
@@ -317,7 +317,7 @@
     (let loop ([t0 t0] [more more])
       (match more
 	[('star . more)
-	 (loop `(pointer ,t0) more) ]
+	 (loop `(c-pointer ,t0) more) ]
 	[(('op "&") . more)
 	 (loop `(ref ,t0) more) ]
 	[('open-paren 'star 'close-paren 'open-paren . more)
@@ -331,7 +331,7 @@
 	[(('id _) 'open-bracket . more2)
 	 (let ([a (memq 'close-bracket more2)])
 	   (if a
-	       (loop `(pointer ,t0) (cons (car more) (cdr a)))
+	       (loop `(c-pointer ,t0) (cons (car more) (cdr a)))
 	       (values (simplify-type t0 io return-type discard) more) ) ) ]
 	[_ (values (simplify-type t0 io return-type discard) more)] ) ) ) )
 
@@ -350,41 +350,41 @@
   (cond [io t0]
 	[return-type
 	 (match t0
-	   ['(pointer char) (strtype)]
-	   ['(pointer (const char)) (strtype)]
-	   [`(pointer (const ,(? string? t))) (simplify-ptr t0 t)]
-	   [`(pointer ,(? string? t)) (simplify-ptr t0 t)]
+	   ['(c-pointer char) (strtype)]
+	   ['(c-pointer (const char)) (strtype)]
+	   [`(c-pointer (const ,(? string? t))) (simplify-ptr t0 t)]
+	   [`(c-pointer ,(? string? t)) (simplify-ptr t0 t)]
 	   [`(ref (const ,(? string? t))) (simplify-ref t0 t)]
 	   [`(ref ,(? string? t)) (simplify-ref t0 t)]
 	   [_ t0] ) ]
 	[else
 	 (let loop ([t1 t0])
 	   (match t1
-	     [`(pointer (const ,t2)) (loop `(pointer ,t2))]
+	     [`(c-pointer (const ,t2)) (loop `(c-pointer ,t2))]
 	     [`(ref (const ,t2)) (loop `(ref ,t2))]
-	     ['(pointer unsigned-fixnum) 'u32vector]
-	     [(or '(pointer unsigned-integer)
-		  '(pointer unsigned-int)
-		  '(pointer unsigned-int32)
-		  '(pointer unsigned-integer32)) 
+	     ['(c-pointer unsigned-fixnum) 'u32vector]
+	     [(or '(c-pointer unsigned-integer)
+		  '(c-pointer unsigned-int)
+		  '(c-pointer unsigned-int32)
+		  '(c-pointer unsigned-integer32)) 
 	      'u32vector]
-	     ['(pointer unsigned-short) 'u16vector]
-	     ['(pointer unsigned-char) 'u8vector]
-	     ['(pointer unsigned-byte) 'u8vector]
-	     ['(pointer byte) 's8vector]
-	     ['(pointer unsigned-long) 'u32vector]
-	     ['(pointer fixnum) 's32vector]
-	     [(or '(pointer integer)
-		  '(pointer integer32)
-		  '(pointer int32)
-		  '(pointer int) )
+	     ['(c-pointer unsigned-short) 'u16vector]
+	     ['(c-pointer unsigned-char) 'u8vector]
+	     ['(c-pointer unsigned-byte) 'u8vector]
+	     ['(c-pointer byte) 's8vector]
+	     ['(c-pointer unsigned-long) 'u32vector]
+	     ['(c-pointer fixnum) 's32vector]
+	     [(or '(c-pointer integer)
+		  '(c-pointer integer32)
+		  '(c-pointer int32)
+		  '(c-pointer int) )
 	      's32vector]
-	     ['(pointer short) 's16vector]
-	     ['(pointer char) (strtype)]
-	     ['(pointer long) 's32vector]
-	     ['(pointer float) 'f32vector]
-	     [`(pointer ,(or 'double 'number)) 'f64vector]
-	     [`(pointer ,(? string? t)) (simplify-ptr t1 t)]
+	     ['(c-pointer short) 's16vector]
+	     ['(c-pointer char) (strtype)]
+	     ['(c-pointer long) 's32vector]
+	     ['(c-pointer float) 'f32vector]
+	     [`(c-pointer ,(or 'double 'number)) 'f64vector]
+	     [`(c-pointer ,(? string? t)) (simplify-ptr t1 t)]
 	     [`(ref ,(? string? t)) (simplify-ref t1 t)]
 	     [_ t1] ) ) ] ) )
 
@@ -533,7 +533,7 @@
 	  (let loop2 ([type type] [more more])
 	    (match more
 	      [('star . more)
-	       (loop2 (simplify-type `(pointer ,type) #f #t #f) more) ]
+	       (loop2 (simplify-type `(c-pointer ,type) #f #t #f) more) ]
 	      [(('id name) . more)
 	       (set! fields (cons (list type (string->symbol name)) fields))
 	       (process-struct-member-def m sname name type (or mut? mutable-fields))
@@ -551,7 +551,7 @@
 	    [fields (reverse fields)] )
 	(emit
 	 `(,(rename 'define) ,maker
-	   (,(rename 'foreign-lambda*) (pointer (,m ,sname)) ,fields
+	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,fields
 	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~Areturn(tmp_);"
 	       m sname m sname m sname
 	       (string-intersperse
@@ -570,7 +570,7 @@
 		 [type type] )
 	(match more
 	  [('star . more)
-	   (loop more `(pointer ,type)) ]
+	   (loop more `(c-pointer ,type)) ]
 	  [(('id tname))
 	   (set! type-map (alist-cons (string->symbol tname) 
 				      (simplify-type type #f #t #f)
@@ -862,7 +862,7 @@
 	  ,(filter-map
 	    (lambda (rvar var io arg)
 	      (let ([pt (match arg
-			  [('pointer t) t]
+			  [('c-pointer t) t]
 			  [('ref t) t]
 			  [_ (if io
 				 (begin
@@ -936,9 +936,9 @@
 
 (define (process-struct-member-def m sname name type mut?)
   (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
-    (let ((g `(,(rename 'foreign-lambda*) ,type (((pointer (,m ,sname)) s))
+    (let ((g `(,(rename 'foreign-lambda*) ,type (((c-pointer (,m ,sname)) s))
 	       ,(sprintf "return(s->~A);" name) ) )
-	  (s `(,(rename 'foreign-lambda*) void (((pointer (,m ,sname)) s)
+	  (s `(,(rename 'foreign-lambda*) void (((c-pointer (,m ,sname)) s)
 						(,type x) )
 		,(sprintf "s->~A = x;" name) ) ) )
       (emit
@@ -959,7 +959,7 @@
     (unless (memq csname abstract-classes)
       (emit
        `(,(rename 'begin)
-	  (,(rename 'define) ,destr (,(rename 'foreign-lambda) void "delete " (pointer ,name)))
+	  (,(rename 'define) ,destr (,(rename 'foreign-lambda) void "delete " (c-pointer ,name)))
 	  (,(rename 'define-method) (,destructor-name (this ,cname))
 	    (,destr (,(rename 'slot-value) this 'this)) ) )))))
 
@@ -970,7 +970,7 @@
      `(,(rename 'begin)
 	(,(rename 'declare) (hide ,constr))
 	(,(rename 'define) ,constr 
-	  (,(rename 'foreign-lambda) (pointer ,name) ,(string-append "new " name) ,@args))
+	  (,(rename 'foreign-lambda) (c-pointer ,name) ,(string-append "new " name) ,@args))
 	(,(rename 'define-method) (,constructor-name (this ,cname) initargs)
 	  ;; no CALL-NEXT-METHOD here: we don't want to invoke the base-class constructor.
 	  ,@(if finalize
@@ -989,7 +989,7 @@
 			      (not (assq i lvars))
 			      var))
 		       vars io (iota (length vars)))
-		      ,(make-inout-wrapper constr `(pointer ,name) vars args io lvars) ) )
+		      ,(make-inout-wrapper constr `(c-pointer ,name) vars args io lvars) ) )
 		 constr) 
 	    initargs) ) ) ) )))
 
@@ -1008,7 +1008,7 @@
 	(,(rename 'declare) (hide ,stub))
 	(,(rename 'define) ,stub 
 	  (,(rename (if cb 'foreign-safe-lambda* 'foreign-lambda*))
-	   ,rtype (((pointer ,name) ,this) ,@fvars)
+	   ,rtype (((c-pointer ,name) ,this) ,@fvars)
 	   ,(sprintf (let ([code (if (eq? 'void rtype) 
 				     "~A->~A(~A);"
 				     "return(~A->~A(~A));") ] )
@@ -1115,8 +1115,7 @@
       [(unsigned-long) (str "unsigned long")]
       [(float) (str "float")]
       [(double number) (str "double")]
-      ;; pointer and nonnull-pointer are DEPRECATED
-      [(pointer nonnull-pointer c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer)
+      [(c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer)
        (str "void *")]
       [(byte-vector nonnull-byte-vector u8vector nonnull-u8vector) (str "unsigned char *")]
       ((pointer-vector nonnull-pointer-vector) (str "void **"))
@@ -1136,7 +1135,7 @@
 	     [(string? type) (str type)]
 	     [(pair? type)
 	      (match type
-		[((or 'pointer 'c-pointer 'nonnull-pointer 'nonnull-c-pointer) ptype)
+		[((or 'c-pointer 'nonnull-c-pointer) ptype)
 		 (foreign-type-declaration ptype (string-append "*" target)) ]
 		[('ref rtype)
 		 (foreign-type-declaration rtype (string-append "&" target)) ]
@@ -1241,7 +1240,7 @@
       [('const t) (rec t)]
       [('function . _) '<pointer>]
       [('instance _ c) c]
-      [((or 'pointer 'c-pointer 'ref) x)
+      [((or 'c-pointer 'ref) x)
        (if io
 	   (rec x)
 	   '<pointer>) ]
