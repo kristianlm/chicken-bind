@@ -285,6 +285,7 @@
     [`(scheme-value . ,more) (values 'scheme-object more)]
     [`(scheme-pointer . ,more) (values 'scheme-pointer more)]
     [`(byte-vector . ,more) (values 'byte-vector more)]
+    [`(blob . ,more) (values 'blob more)]
     [`(pointer-vector . ,more) (values 'pointer-vector more)]
     [`(fixnum . ,more) (values 'int more)]
     [`(pointer unsigned short int star . ,more) (values '(c-pointer unsigned-short) more)]
@@ -906,7 +907,8 @@
     [(s32vector) 's32vector-length]
     [(f32vector) 'f32vector-length]
     [(f64vector) 'f64vector-length]
-    [(byte-vector) 'byte-vector-length]
+    [(byte-vector) 'byte-vector-length]	; DEPRECATED
+    [(blob) 'blob-size]
     [(c-string c-string*) 'string-length]
     [else (parsing-error "do not know how to compute length of foreign type argument" t)] ) )
 
@@ -1115,9 +1117,11 @@
       [(unsigned-long) (str "unsigned long")]
       [(float) (str "float")]
       [(double number) (str "double")]
-      [(c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer)
+      [(c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer blob nonnull-blob)
        (str "void *")]
-      [(byte-vector nonnull-byte-vector u8vector nonnull-u8vector) (str "unsigned char *")]
+      [(byte-vector nonnull-byte-vector 		; DEPRECATED
+		    u8vector nonnull-u8vector)
+       (str "unsigned char *")]
       ((pointer-vector nonnull-pointer-vector) (str "void **"))
       [(u16vector nonnull-u16vector) (str "unsigned short *")]
       [(s8vector nonnull-s8vector) (str "char *")]

@@ -60,7 +60,8 @@ space     [ ]
 "___safe"                           (tok 'callback)
 "___scheme_value"                   (tok 'scheme-value)
 "___scheme_pointer"                 (tok 'scheme-pointer)
-"___byte_vector"                    (tok 'byte-vector)
+"___byte_vector"                    (tok 'byte-vector) ; DEPRECATED
+"___blob"                           (tok 'blob)
 "C_word"                            (tok 'scheme-value)
 "___abstract"                       (tok 'abstract)
 "___specialize"                     (tok 'specialize)
