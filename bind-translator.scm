@@ -75,10 +75,10 @@
 
 (define (chunkify)
   (let ((iparts 0))
-    (let rec ([scope 0])
+    (let rec ((scope 0))
       (let ([chunks '()]
 	    (cdebug (memq 'X ##compiler#debugging-chicken)))
-	(let loop ([mode #f] [tokens '()])
+	(let loop ((mode #f) (tokens '()))
 	  (match-let (((t . ln) (lexer)))
 	    (when cdebug (pp t (current-error-port)))
 	    (case t
@@ -96,14 +96,14 @@
 	      [(pp-define pp-include pp-if pp-ifdef pp-ifndef pp-else pp-endif pp-undef pp-import
 			  pp-pragma pp-error)
 	       (loop 'pp (list t)) ]
-	      [(close-curly)
-	       (cond [(not (positive? scope)) (parsing-error ln "`}' out of context")]
-		     [(null? tokens) (reverse chunks)]
-		     [else (cons (reverse tokens) chunks)] ) ]
 	      [(open-curly)
 	       (let ([new (rec (add1 scope))])
 		 (set! chunks (cons (append-reverse tokens `((scope . ,new))) chunks))
 		 (loop #f '()) ) ]
+	      ((close-curly)
+	       (cond [(not (positive? scope)) (parsing-error ln "`}' out of context")]
+		     [(null? tokens) (reverse chunks)]
+		     [else (cons (reverse tokens) chunks)] ) )
 	      [(close-paren)
 	       (if (eq? mode 'declare)
 		   (begin
@@ -1201,13 +1201,33 @@
 	(cdr a)
 	(string->symbol (string-append "<" (->string (fix-name str #f)) ">")) ) ) )
 
+(define (repair-chunks chunks)		; fixup typedefs
+  (let loop ((chunks chunks))
+    (match chunks
+      (() '())
+      (((('typedef (and op (or 'union 'struct 'enum)) (and name ('id _)) 
+		   (and scope ('scope _))) 
+	 (and tname ('id _))) . more)
+       (cons* 
+	`(,op ,name ,scope)
+	`(typedef ,op ,name ,tname)
+	(loop more)))
+      (((('typedef (and op (or 'union 'struct 'enum)) 
+		   (and scope ('scope _))) 
+	 (and tname ('id _))) . more)
+       (cons* 
+	`(,op ,tname ,scope)
+	`(typedef ,op ,tname ,tname)
+	(loop more)))
+      ((c . more) (cons c (loop more))))))
+
 (define (parse-easy-ffi text rename #!optional chunkify-only)
   (lexer-init 'string text)
   (set! processed-output '())
   (set! pp-conditional-stack '())
   (set! pp-process #t)
   (fluid-let ((input-filename "<string>"))
-    (let ((chunks (chunkify)))
+    (let ((chunks (repair-chunks (chunkify))))
       (if chunkify-only
 	  chunks
 	  (fluid-let ((rename-function rename))
@@ -1218,7 +1238,7 @@
   (lexer-init 'port port)
   (fluid-let ((input-filename (port-name port)))
     (let* ([output processed-output]
-	   [chunks (chunkify)] )
+	   [chunks (repair-chunks (chunkify))] )
       (set! processed-output '())
       (for-each parse chunks)
       (set! processed-output (append output processed-output)) ) ))
