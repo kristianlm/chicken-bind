@@ -94,7 +94,8 @@ EOF
 			(current-input-port)
 			f) )
 		   identity
-		   chunkify-only)))
+		   chunkify-only
+		   f)))
 	 (print "\n;;; END OF FILE"))
        (cond ((equal? "-" output) (process))
 	     ((port? output)

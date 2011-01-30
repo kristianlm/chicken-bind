@@ -553,7 +553,7 @@
 	(emit
 	 `(,(rename 'define) ,maker
 	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,fields
-	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~Areturn(tmp_);"
+	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~AC_return(tmp_);"
 	       m sname m sname m sname
 	       (string-intersperse
 		(map (lambda (f) (sprintf "tmp_->~A = ~A;~%" (cadr f) (cadr f)))
@@ -1205,28 +1205,29 @@
   (let loop ((chunks chunks))
     (match chunks
       (() '())
-      (((('typedef (and op (or 'union 'struct 'enum)) (and name ('id _)) 
-		   (and scope ('scope _))) 
-	 (and tname ('id _))) . more)
+      ((('typedef (and op (or 'union 'struct 'enum)) 
+		  (and name ('id _)) 
+		  (and scope ('scope _)))
+	((and tname ('id _))) . more)
        (cons* 
 	`(,op ,name ,scope)
 	`(typedef ,op ,name ,tname)
 	(loop more)))
-      (((('typedef (and op (or 'union 'struct 'enum)) 
-		   (and scope ('scope _))) 
-	 (and tname ('id _))) . more)
+      ((('typedef (and op (or 'union 'struct 'enum)) 
+		  (and scope ('scope _)))
+	((and tname ('id _))) . more)
        (cons* 
 	`(,op ,tname ,scope)
 	`(typedef ,op ,tname ,tname)
 	(loop more)))
       ((c . more) (cons c (loop more))))))
 
-(define (parse-easy-ffi text rename #!optional chunkify-only)
+(define (parse-easy-ffi text rename #!optional chunkify-only filename)
   (lexer-init 'string text)
   (set! processed-output '())
   (set! pp-conditional-stack '())
   (set! pp-process #t)
-  (fluid-let ((input-filename "<string>"))
+  (fluid-let ((input-filename filename))
     (let ((chunks (repair-chunks (chunkify))))
       (if chunkify-only
 	  chunks
