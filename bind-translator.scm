@@ -1213,7 +1213,13 @@
 	`(,op ,name ,scope)
 	`(typedef ,op ,name ,tname)
 	(loop more)))
-      ((('typedef (and op (or 'union 'struct 'enum)) 
+      ((('typedef 'enum (and scope ('scope _)))
+	((and tname ('id _))) . more)
+       (cons* 
+	`(enum ,tname ,scope)
+	`(typedef int ,tname)
+	(loop more)))
+      ((('typedef (and op (or 'union 'struct)) 
 		  (and scope ('scope _)))
 	((and tname ('id _))) . more)
        (cons* 
