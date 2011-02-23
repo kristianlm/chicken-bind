@@ -130,7 +130,8 @@ space     [ ]
 					     [(char=? c #\")
 					      (tok (list 'string (reverse-list->string cs)) )]
 					     [else (loop (cons c cs))] ) ) )
-\'\\{digit}{digit}{digit}\'        (tok (list 'char (string->number (substring yytext 3 5) 8)))
+\'\\{digit}{digit}{digit}\'        (tok (list 'char (string->number (substring yytext 2 5) 8)))
+\'\\x{digit16}+\'                  (tok (list 'char (string->number (substring yytext 3 (- (string-length yytext) 1)) 16)))
 \'\\0\'                            (tok '(char #\nul))
 \'\\a\'                            (tok '(char #\alarm))
 \'\\b\'                            (tok '(char #\backspace))
