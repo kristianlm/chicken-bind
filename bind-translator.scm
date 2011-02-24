@@ -1,4 +1,4 @@
-;;;; bind-translator.scm
+;;; bind-translator.scm
 
 
 (declare
@@ -1203,24 +1203,25 @@
 
 (define (repair-chunks chunks)		; fixup typedefs
   (let loop ((chunks chunks))
+    ;(pp `(REPAIR: ,@chunks) (current-error-port))
     (match chunks
       (() '())
       ((('typedef (and op (or 'union 'struct 'enum)) 
 		  (and name ('id _)) 
-		  (and scope ('scope _)))
+		  (and scope ('scope . _)))
 	((and tname ('id _))) . more)
        (cons* 
 	`(,op ,name ,scope)
 	`(typedef ,op ,name ,tname)
 	(loop more)))
-      ((('typedef 'enum (and scope ('scope _)))
+      ((('typedef 'enum (and scope ('scope . _)))
 	((and tname ('id _))) . more)
        (cons* 
 	`(enum ,tname ,scope)
 	`(typedef int ,tname)
 	(loop more)))
       ((('typedef (and op (or 'union 'struct)) 
-		  (and scope ('scope _)))
+		  (and scope ('scope . _)))
 	((and tname ('id _))) . more)
        (cons* 
 	`(,op ,tname ,scope)
