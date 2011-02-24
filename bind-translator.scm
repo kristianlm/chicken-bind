@@ -288,11 +288,13 @@
     [`(blob . ,more) (values 'blob more)]
     [`(pointer-vector . ,more) (values 'pointer-vector more)]
     [`(fixnum . ,more) (values 'int more)]
-    [`(pointer unsigned short int star . ,more) (values '(c-pointer unsigned-short) more)]
-    [`(pointer unsigned long int star . ,more) (values '(c-pointer unsigned-long) more)]
+    [`(pointer unsigned short int star . ,more) (values '(xc-pointer unsigned-short) more)]
+    [`(pointer unsigned long int star . ,more) (values '(xc-pointer unsigned-long) more)]
     [`(pointer unsigned ,(and t (or 'char 'short 'long 'int 'byte)) star . ,more) 
-     (values `(c-pointer ,(string->symbol (string-append "unsigned-" (symbol->string t)))) more) ]
-    [`(pointer ,t star . ,more) (values `(c-pointer ,t) more)]
+     (values 
+      `(xc-pointer ,(string->symbol (string-append "unsigned-" (symbol->string t)))) 
+      more) ]
+    [`(pointer ,t star . ,more) (values `(xc-pointer ,t) more)]
     [`(int . ,more) (values 'integer more)]
     [`(char . ,more) (values 'char more)]
     [`(short int . ,more) (values 'short more)]
@@ -355,6 +357,7 @@
 	   ['(c-pointer (const char)) (strtype)]
 	   [`(c-pointer (const ,(? string? t))) (simplify-ptr t0 t)]
 	   [`(c-pointer ,(? string? t)) (simplify-ptr t0 t)]
+	   [`(xc-pointer ,t) `(c-pointer ,t)]
 	   [`(ref (const ,(? string? t))) (simplify-ref t0 t)]
 	   [`(ref ,(? string? t)) (simplify-ref t0 t)]
 	   [_ t0] ) ]
@@ -387,6 +390,7 @@
 	     [`(c-pointer ,(or 'double 'number)) 'f64vector]
 	     [`(c-pointer ,(? string? t)) (simplify-ptr t1 t)]
 	     [`(ref ,(? string? t)) (simplify-ref t1 t)]
+	     [`(xc-pointer ,t) `(c-pointer ,t)]
 	     [_ t1] ) ) ] ) )
 
 (define (parse-arglist ts)
