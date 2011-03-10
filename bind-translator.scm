@@ -24,9 +24,6 @@
 
 (include "c.l.scm")
 
-(when (feature? 'csi)
-  (error "the `bind' extension can only be used in compiled code"))
-
 (define mutable-fields #f)
 (define use-finalizers #f)
 (define exception-handler #f)
