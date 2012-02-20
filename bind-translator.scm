@@ -1382,7 +1382,7 @@ EOF
 	     (loop (cdr pstack) ppstack) ] 
 	    [else (loop pstack ppstack)] ) ) ) ) ) )
 
-(define (set-bind-options opts)
+(define (set-bind-options . opts)
   (let loop ((opts opts))
     (match opts
       (() #f)
