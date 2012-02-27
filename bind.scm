@@ -58,7 +58,7 @@
   (parse-opaque-type-declaration (cdr x) r))
 
 (define-syntax (bind-options x r c)
-  (set-bind-options (strip-syntax (cdr x)))
+  (apply set-bind-options (strip-syntax (cdr x)))
   `(,(r 'void)))
 
 (define-syntax (bind-rename x r c)
