@@ -523,6 +523,19 @@
      (values (string->symbol name) i more) ] 
     [_ (parsing-error "invalid enum syntax" ts)] ) )
 
+(define (struct-name arg-def)
+  (let loop ((arg-def arg-def))
+    (match arg-def
+      [('struct sname) sname]
+      [('const ('struct sname))  sname]
+      [else (if (list? arg-def) (loop (car arg-def)) #f)])))
+
+(define struct-by-val? struct-name)
+
+; ((const (struct "mystruct")) name) -> (((c-pointer (const ... ))) name)
+(define (wrap-in-pointer arg-def)
+  `((c-pointer ,(car arg-def)) ,@(cdr arg-def)) )
+
 (define (parse-struct-def m sname ab ts)
   (let ([fields '()])
     (let loop ([ts ts])
@@ -549,17 +562,23 @@
 		  (sprintf "syntax error in struct/union form (~A): `~A'" 
 		    sname more))] ) ) ) ) )
     (unless ab 
-      (let ([maker (fix-name (string-append "make-" (->string sname)))]
-	    [fields (reverse fields)] )
+      (let* ([maker (fix-name (string-append "make-" (->string sname)))]
+             [fields (reverse fields)]
+             [argfields (map (lambda (f) (if (struct-by-val? f)
+                                        (wrap-in-pointer f)
+                                        f)) fields)])
 	(emit
 	 `(,(rename 'define) ,maker
-	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,fields
+	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,argfields
 	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~AC_return(tmp_);"
-	       m sname m sname m sname
-	       (string-intersperse
-		(map (lambda (f) (sprintf "tmp_->~A = ~A;~%" (cadr f) (cadr f)))
-		     fields)
-		"") ) ) ) ) ) ) ) )
+                      m sname m sname m sname
+                      (string-intersperse
+                       (map (lambda (f) (sprintf "tmp_->~A = ~A~A;~%~n"
+                                            (cadr f)
+                                            (if (struct-by-val? f) "*" "")
+                                            (cadr f)))
+                            fields)
+                       "") ) ) ) ) ) ) ) )
 
 (define (parse-typedef ts)
   (let ([box (vector #f)])
@@ -937,11 +956,22 @@
      (_ (parsing-error "error in enum-def (internal)")))
    (reverse items) ) )
 
+
+
 (define (process-struct-member-def m sname name type mut?)
   (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
-    (let ((g `(,(rename 'foreign-lambda*) ,type (((c-pointer (,m ,sname)) s))
-	       ,(sprintf "return(s->~A);" name) ) )
-	  (s `(,(rename 'foreign-lambda*) void (((c-pointer (,m ,sname)) s)
+    (let* ((rsname (->string (struct-name type)))
+           (args `((c-pointer (,m ,sname)) s))
+           (g (if (struct-by-val? type)
+                  `(,(rename 'foreign-primitive) scheme-object (,args)
+                    ,(conc "
+C_word ab [C_bytestowords(sizeof(C_header) + sizeof(struct " rsname "))];
+*((struct " rsname "*)C_data_pointer(ab)) = s->" (->string name) ";
+ab [0] = C_BYTEVECTOR_TYPE | sizeof(struct " rsname ");
+C_return(ab);"))
+                 `(,(rename 'foreign-lambda*) ,type (,args)
+                   ,(sprintf "return(s->~A);" name) )) )
+	  (s `(,(rename 'foreign-lambda*) void (,args
 						(,type x) )
 		,(sprintf "s->~A = x;" name) ) ) )
       (emit
