@@ -956,7 +956,12 @@
      (_ (parsing-error "error in enum-def (internal)")))
    (reverse items) ) )
 
-
+(define (gen-struct-stack-allocation-stub return-struct data)
+  (conc "
+C_word ab [C_bytestowords(sizeof(C_header) + sizeof(struct " return-struct "))];
+*((struct " return-struct "*)C_data_pointer(ab)) = " data ";
+ab [0] = C_BYTEVECTOR_TYPE | sizeof(struct " return-struct ");
+C_return(ab);"))
 
 (define (process-struct-member-def m sname name type mut?)
   (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
@@ -964,11 +969,8 @@
            (args `((c-pointer (,m ,sname)) s))
            (g (if (struct-by-val? type)
                   `(,(rename 'foreign-primitive) scheme-object (,args)
-                    ,(conc "
-C_word ab [C_bytestowords(sizeof(C_header) + sizeof(struct " rsname "))];
-*((struct " rsname "*)C_data_pointer(ab)) = s->" (->string name) ";
-ab [0] = C_BYTEVECTOR_TYPE | sizeof(struct " rsname ");
-C_return(ab);"))
+                    ,(gen-struct-stack-allocation-stub rsname
+                                                       (conc "s->" (->string name))))
                  `(,(rename 'foreign-lambda*) ,type (,args)
                    ,(sprintf "return(s->~A);" name) )) )
 	  (s `(,(rename 'foreign-lambda*) void (,args
