@@ -843,8 +843,28 @@
 	      ";\n"
 	      (cdr c-exception-handler) "\n"
 	      (if (eq? 'void rtype) "" (sprintf "return(~a);" rvar))))))
-      `(,(rename (if safe 'foreign-safe-lambda 'foreign-lambda))
-	,rtype ,name ,@argtypes)))
+      (let* ([any-struct-arg? (any struct-by-val? argtypes)]
+             [maybe-wrap-arg  (lambda (argt) (if (struct-by-val? argt)
+                                       (wrap-in-pointer argt)
+                                       argt))]
+            [argdefs (map (lambda (atype index)
+                            `(,atype ,(fix-name (conc "a" index) )))
+                          argtypes (iota (length argtypes)))]
+            [call-stub (conc (if (eq? 'void rtype)
+                                                             ""
+                                                             "C_return(") name "("
+                                      (string-intersperse
+                                       (map (lambda (a)
+                                              (if (struct-by-val? a)
+                                                  (conc "*" (cadr a))
+                                                  (conc (cadr a)))) argdefs)
+                                       ",")
+                                      (if (eq? 'void rtype) "" ")") ");")])
+        (if any-struct-arg?
+           `(,(rename (if safe 'foreign-primitive 'foreign-lambda*))
+             ,rtype ,(map maybe-wrap-arg argdefs) ,call-stub)
+           `(,(rename (if safe 'foreign-safe-lambda 'foreign-lambda))
+             ,rtype ,name ,@argtypes)))))
 
 (define (process-prototype-def rtype name args io lvars cb #!optional (use-prefix #t))
   (let* ([name2 (fix-name name use-prefix)])
