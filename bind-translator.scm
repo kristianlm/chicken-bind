@@ -964,10 +964,11 @@ ab [0] = C_BYTEVECTOR_TYPE | sizeof(struct " return-struct ");
 C_return(ab);"))
 
 (define (process-struct-member-def m sname name type mut?)
-  (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
+  (let* ([getter (fix-name (string-append (->string sname) "-" (->string name)))]
+         [%getter (fix-name (string-append "%" (->string getter)))])
     (let* ((rsname (->string (struct-name type)))
            (args `((c-pointer (,m ,sname)) s))
-           (g (if (struct-by-val? type)
+           (%g (if (struct-by-val? type)
                   `(,(rename 'foreign-primitive) scheme-object (,args)
                     ,(gen-struct-stack-allocation-stub rsname
                                                        (conc "s->" (->string name))))
@@ -975,11 +976,17 @@ C_return(ab);"))
                    ,(sprintf "return(s->~A);" name) )) )
 	  (s `(,(rename 'foreign-lambda*) void (,args
 						(,type x) )
-		,(sprintf "s->~A = x;" name) ) ) )
-      (emit
-       (if mut?
-	   `(,(rename 'define) ,getter (,(rename 'getter-with-setter) ,g ,s))
-	   `(,(rename 'define) ,getter ,g) ) ) ) ) )
+               ,(sprintf "s->~A = x;" name) ) ) 
+          (%def (lambda (getter-name)
+                  (if mut?
+                       `(,(rename 'define) ,getter-name (,(rename 'getter-with-setter) ,%g ,s))
+                       `(,(rename 'define) ,getter-name ,%g) )))
+          (def (lambda (getter-name)
+                 `(define (,getter-name s) (location (,%getter s))))))
+      (emit (if (struct-by-val? type)
+                `(begin ,(%def %getter)
+                        ,(def getter))
+                `(begin ,(%def getter))))) ) )
 
 (define (process-class-def name cname basenames)
   (let ([destr (gensym)]
