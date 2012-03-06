@@ -534,7 +534,13 @@
 
 ; ((const (struct "mystruct")) name) -> (((c-pointer (const ... ))) name)
 (define (wrap-in-pointer arg-def)
-  `((c-pointer ,(car arg-def)) ,@(cdr arg-def)) )
+  (let loop ((arg-def arg-def))
+    (match arg-def
+      (('struct _) `(c-pointer ,arg-def))
+      (('const ('struct _)) `(c-pointer ,arg-def))
+      (else (if (list? arg-def)
+                `(,(loop (car arg-def)) ,@(cdr arg-def))
+                arg-def)))) )
 
 (define (parse-struct-def m sname ab ts)
   (let ([fields '()])
