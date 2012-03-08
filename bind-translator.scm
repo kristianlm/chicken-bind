@@ -892,22 +892,36 @@
 		,(make-inout-wrapper tmp rtype vars args io lvars) ) ) )
 	 (let* ([vars (map (lambda (x) (gensym)) args)]
 		[io? (or (any identity io) (pair? lvars))]
-		[fname (if io? (gensym) name2)] )
+		[fname (if io? (gensym) name2)]
+                [%fname (fix-name (conc "%" fname))]
+                [%arglist (map (compose fix-name (cut conc "a" <>))
+                               (iota (length args)))]
+                [%def-fun (lambda (fname)
+                            `(,(rename 'define) ,fname
+                             ,(c-exception-wrapper (->string name) args cb rtype)))]
+                [def-fun (lambda (fname)
+                           `(,(rename 'define) (,(fix-name fname) ,@%arglist)
+                             (let ([dest
+                                    (location (make-blob (foreign-value
+                                                          ,(conc "sizeof" rtype)
+                                                          int)))])
+                               (,%fname dest ,@%arglist)
+                               dest)))])
 	   `(,(rename 'begin)
-	      ,@(if io? `((,(rename 'declare) (hide ,fname))) '())
-	      (,(rename 'define) ,(if (struct-by-val? rtype)
-                                      (fix-name (conc "%" fname))
-                                      fname)
-		,(c-exception-wrapper (->string name) args cb rtype))
-	      ,@(if io?
-		    (let ([inlist (filter-map (lambda (var io i)
-						(and (memq io '(#f in inout)) 
-						     (not (assq i lvars))
-						     var) )
-					      vars io (iota (length vars))) ] )
-		      `((,(rename 'define) (,name2 ,@inlist) 
-			  ,(make-inout-wrapper fname rtype vars args io lvars) ) ) )
-		    '() ) ) ) ) ) ) )
+             ,@(if io? `((,(rename 'declare) (hide ,fname))) '())
+             ,(if (struct-by-val? rtype)
+                  `(begin ,(%def-fun %fname)
+                          ,(def-fun fname))
+                  (%def-fun fname))
+             ,@(if io?
+                   (let ([inlist (filter-map (lambda (var io i)
+                                               (and (memq io '(#f in inout)) 
+                                                    (not (assq i lvars))
+                                                    var) )
+                                             vars io (iota (length vars))) ] )
+                     `((,(rename 'define) (,name2 ,@inlist) 
+                        ,(make-inout-wrapper fname rtype vars args io lvars) ) ) )
+                   '() ) ) ) ) ) ) )
 
 (define (make-inout-wrapper rname rtype vars args io lvars)
   (let ([tmp (gensym)] 
