@@ -843,26 +843,32 @@
 	      ";\n"
 	      (cdr c-exception-handler) "\n"
 	      (if (eq? 'void rtype) "" (sprintf "return(~a);" rvar))))))
-      (let* ([any-struct-arg? (any struct-by-val? argtypes)]
+      (let* ([rstruct? (struct-by-val? rtype)]
+             [any-struct-arg? (or rstruct? (any struct-by-val? argtypes))]
              [maybe-wrap-arg  (lambda (argt) (if (struct-by-val? argt)
                                        (wrap-in-pointer argt)
                                        argt))]
             [argdefs (map (lambda (atype index)
                             `(,atype ,(fix-name (conc "a" index) )))
                           argtypes (iota (length argtypes)))]
-            [call-stub (conc (if (eq? 'void rtype)
-                                                             ""
-                                                             "C_return(") name "("
-                                      (string-intersperse
-                                       (map (lambda (a)
-                                              (if (struct-by-val? a)
-                                                  (conc "*" (cadr a))
-                                                  (conc (cadr a)))) argdefs)
-                                       ",")
-                                      (if (eq? 'void rtype) "" ")") ");")])
+            [call-stub (conc name "("
+                              (string-intersperse
+                               (map (lambda (a)
+                                      (if (struct-by-val? a)
+                                          (conc "*" (cadr a))
+                                          (conc (cadr a)))) argdefs)
+                               ",") ")")]
+            [call-stub-ret (sprintf (cond [(eq? 'void rtype) "~a;"]
+                                       [rstruct? "*dest=(~a);"]
+                                       [else "C_return(~a);"])
+                                 call-stub)]
+            [wrapped-args (map maybe-wrap-arg argdefs)])
         (if any-struct-arg?
            `(,(rename (if safe 'foreign-primitive 'foreign-lambda*))
-             ,rtype ,(map maybe-wrap-arg argdefs) ,call-stub)
+             ,(if rstruct? 'void rtype)
+             ,(if rstruct?
+                  `(((c-pointer ,rtype) dest) ,@wrapped-args)
+                  wrapped-args) ,call-stub-ret)
            `(,(rename (if safe 'foreign-safe-lambda 'foreign-lambda))
              ,rtype ,name ,@argtypes)))))
 
@@ -889,7 +895,9 @@
 		[fname (if io? (gensym) name2)] )
 	   `(,(rename 'begin)
 	      ,@(if io? `((,(rename 'declare) (hide ,fname))) '())
-	      (,(rename 'define) ,fname
+	      (,(rename 'define) ,(if (struct-by-val? rtype)
+                                      (fix-name (conc "%" fname))
+                                      fname)
 		,(c-exception-wrapper (->string name) args cb rtype))
 	      ,@(if io?
 		    (let ([inlist (filter-map (lambda (var io i)
