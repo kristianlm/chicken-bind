@@ -49,7 +49,7 @@
 (define-syntax bind-include-path
   (lambda (x r c)
     (set! ffi-include-path-list (append (cdr x) ffi-include-path-list))
-    '(,(r 'void) ) ) )
+    `(,(r 'void) ) ) )
 
 (define-syntax (bind-type x r c)
   (parse-type-declaration (cdr x) r))
