@@ -849,7 +849,7 @@
                                        (wrap-in-pointer argt)
                                        argt))]
             [argdefs (map (lambda (atype index)
-                            `(,atype ,(fix-name (conc "a" index) )))
+                            `(,atype ,(->symbol (conc "a" index) )))
                           argtypes (iota (length argtypes)))]
             [call-stub (conc name "("
                               (string-intersperse
@@ -893,14 +893,14 @@
 	 (let* ([vars (map (lambda (x) (gensym)) args)]
 		[io? (or (any identity io) (pair? lvars))]
 		[fname (if io? (gensym) name2)]
-                [%fname (fix-name (conc "%" fname))]
-                [%arglist (map (compose fix-name (cut conc "a" <>))
+                [%fname (->symbol (conc fname "/overwrite!"))]
+                [%arglist (map (compose ->symbol (cut conc "a" <>))
                                (iota (length args)))]
                 [%def-fun (lambda (fname)
                             `(,(rename 'define) ,fname
                              ,(c-exception-wrapper (->string name) args cb rtype)))]
                 [def-fun (lambda (fname)
-                           `(,(rename 'define) (,(fix-name fname) ,@%arglist)
+                           `(,(rename 'define) (,fname ,@%arglist)
                              (let ([dest
                                     (location (make-blob (foreign-value
                                                           ,(conc "sizeof" rtype)
