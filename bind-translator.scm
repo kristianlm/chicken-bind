@@ -1004,37 +1004,31 @@
      (_ (parsing-error "error in enum-def (internal)")))
    (reverse items) ) )
 
-(define (gen-struct-stack-allocation-stub return-struct data)
-  (conc "
-C_word ab [C_bytestowords(sizeof(C_header) + sizeof(struct " return-struct "))];
-*((struct " return-struct "*)C_data_pointer(ab)) = " data ";
-ab [0] = C_BYTEVECTOR_TYPE | sizeof(struct " return-struct ");
-C_return(ab);"))
-
 (define (process-struct-member-def m sname name type mut?)
-  (let* ([getter (fix-name (string-append (->string sname) "-" (->string name)))]
-         [%getter (fix-name (string-append "%" (->string getter)))])
-    (let* ((rsname (->string (struct-name type)))
-           (args `((c-pointer (,m ,sname)) s))
-           (%g (if (struct-by-val? type)
-                  `(,(rename 'foreign-primitive) scheme-object (,args)
-                    ,(gen-struct-stack-allocation-stub rsname
-                                                       (conc "s->" (->string name))))
+  (let* ([getter (fix-name (string-append (->string sname) "-" (->string name)))] ; name of procedure
+         [args `((c-pointer (,m ,sname)) s)] ; foreign-lambda*-style arguments
+         ;; getter body
+         [g  (if (struct-by-val? type)
+                 ;; getter body where type is another struct
+                 `(,(rename 'lambda) (s)
+                   (let ([blob (location
+                                (,(rename 'make-blob)
+                                 (,(rename 'foreign-value) ,(sprintf "sizeof~A" type) int)) )]
+                         [copy-struct! (,(rename 'foreign-lambda*) void (((c-pointer ,type) _dest) ,args)
+                                        ,(sprintf "*_dest = s->~A;" name))])
+                     (copy-struct! blob s)
+                     blob))
+                 ;; getter body for primitive types
                  `(,(rename 'foreign-lambda*) ,type (,args)
-                   ,(sprintf "return(s->~A);" name) )) )
-	  (s `(,(rename 'foreign-lambda*) void (,args
-						(,type x) )
-               ,(sprintf "s->~A = x;" name) ) ) 
-          (%def (lambda (getter-name)
-                  (if mut?
-                       `(,(rename 'define) ,getter-name (,(rename 'getter-with-setter) ,%g ,s))
-                       `(,(rename 'define) ,getter-name ,%g) )))
-          (def (lambda (getter-name)
-                 `(define (,getter-name s) (location (,%getter s))))))
-      (emit (if (struct-by-val? type)
-                `(begin ,(%def %getter)
-                        ,(def getter))
-                `(begin ,(%def getter))))) ) )
+                   ,(sprintf "return(s->~A);" name) )) ]
+         ;; setter body
+         [s  `(,(rename 'foreign-lambda*) void (,args (,type x) )
+               ,(sprintf "s->~A = x;" name) ) ])
+    (emit (if mut?
+              (if (struct-by-val? type)
+                  (error "mutable nested structs not supported" (conc type " " name " in struct " sname))
+                  `(,(rename 'define) ,getter (,(rename 'getter-with-setter) ,g ,s)))
+              `(,(rename 'define) ,getter ,g) ) ) ) )
 
 (define (process-class-def name cname basenames)
   (let ([destr (gensym)]
