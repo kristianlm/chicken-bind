@@ -893,8 +893,9 @@
 		    ,@(if (eq? rtype 'void)
 			  '()
 			  (list tmp) ) 
-		    ,@(filter-map (lambda (rvar io) (and (memq io '(out inout)) rvar))
-				  results io) )
+		    ,@(filter-map
+		       (lambda (rvar io) (and (memq io '(out inout)) rvar))
+		       results io) )
 		  tmp) ) )
 	`(,rname ,@vars) ) ) )
 
