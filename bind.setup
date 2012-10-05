@@ -1,6 +1,9 @@
 ;; bind.setup  -*- Scheme -*-
 
-(define version "1.0")
+
+(use make)
+
+(define version "1.1")
 
 (make (("c.l.scm" ("c.l") 
 	(run (csi -s runsilex.scm)) )
