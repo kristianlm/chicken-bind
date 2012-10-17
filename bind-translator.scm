@@ -568,23 +568,17 @@
 		  (sprintf "syntax error in struct/union form (~A): `~A'" 
 		    sname more))] ) ) ) ) )
     (unless ab 
-      (let* ([maker (fix-name (string-append "make-" (->string sname)))]
-             [fields (reverse fields)]
-             [argfields (map (lambda (f) (if (struct-by-val? f)
-                                        (wrap-in-pointer f)
-                                        f)) fields)])
+      (let ([maker (fix-name (string-append "make-" (->string sname)))]
+	    [fields (reverse fields)] )
 	(emit
 	 `(,(rename 'define) ,maker
-	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,argfields
+	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,fields
 	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~AC_return(tmp_);"
-                      m sname m sname m sname
-                      (string-intersperse
-                       (map (lambda (f) (sprintf "tmp_->~A = ~A~A;~%~n"
-                                            (cadr f)
-                                            (if (struct-by-val? f) "*" "")
-                                            (cadr f)))
-                            fields)
-                       "") ) ) ) ) ) ) ) )
+	       m sname m sname m sname
+	       (string-intersperse
+		(map (lambda (f) (sprintf "tmp_->~A = ~A;~%" (cadr f) (cadr f)))
+		     fields)
+		"") ) ) ) ) ) ) ) )
 
 (define (parse-typedef ts)
   (let ([box (vector #f)])
@@ -843,34 +837,8 @@
 	      ";\n"
 	      (cdr c-exception-handler) "\n"
 	      (if (eq? 'void rtype) "" (sprintf "return(~a);" rvar))))))
-      (let* ([rstruct? (struct-by-val? rtype)]
-             [any-struct-arg? (or rstruct? (any struct-by-val? argtypes))]
-             [maybe-wrap-arg  (lambda (argt) (if (struct-by-val? argt)
-                                       (wrap-in-pointer argt)
-                                       argt))]
-            [argdefs (map (lambda (atype index)
-                            `(,atype ,(->symbol (conc "a" index) )))
-                          argtypes (iota (length argtypes)))]
-            [call-stub (conc name "("
-                              (string-intersperse
-                               (map (lambda (a)
-                                      (if (struct-by-val? a)
-                                          (conc "*" (cadr a))
-                                          (conc (cadr a)))) argdefs)
-                               ",") ")")]
-            [call-stub-ret (sprintf (cond [(eq? 'void rtype) "~a;"]
-                                       [rstruct? "*dest=(~a);"]
-                                       [else "C_return(~a);"])
-                                 call-stub)]
-            [wrapped-args (map maybe-wrap-arg argdefs)])
-        (if any-struct-arg?
-           `(,(rename (if safe 'foreign-primitive 'foreign-lambda*))
-             ,(if rstruct? 'void rtype)
-             ,(if rstruct?
-                  `(((c-pointer ,rtype) dest) ,@wrapped-args)
-                  wrapped-args) ,call-stub-ret)
-           `(,(rename (if safe 'foreign-safe-lambda 'foreign-lambda))
-             ,rtype ,name ,@argtypes)))))
+      `(,(rename (if safe 'foreign-safe-lambda 'foreign-lambda))
+	,rtype ,name ,@argtypes)))
 
 (define (process-prototype-def rtype name args io lvars cb #!optional (use-prefix #t))
   (let* ([name2 (fix-name name use-prefix)])
@@ -892,36 +860,20 @@
 		,(make-inout-wrapper tmp rtype vars args io lvars) ) ) )
 	 (let* ([vars (map (lambda (x) (gensym)) args)]
 		[io? (or (any identity io) (pair? lvars))]
-		[fname (if io? (gensym) name2)]
-                [%fname (->symbol (conc fname "/overwrite!"))]
-                [%arglist (map (compose ->symbol (cut conc "a" <>))
-                               (iota (length args)))]
-                [%def-fun (lambda (fname)
-                            `(,(rename 'define) ,fname
-                             ,(c-exception-wrapper (->string name) args cb rtype)))]
-                [def-fun (lambda (fname)
-                           `(,(rename 'define) (,fname ,@%arglist)
-                             (let ([dest
-                                    (location (make-blob (foreign-value
-                                                          ,(conc "sizeof" rtype)
-                                                          int)))])
-                               (,%fname dest ,@%arglist)
-                               dest)))])
+		[fname (if io? (gensym) name2)] )
 	   `(,(rename 'begin)
-             ,@(if io? `((,(rename 'declare) (hide ,fname))) '())
-             ,(if (struct-by-val? rtype)
-                  `(begin ,(%def-fun %fname)
-                          ,(def-fun fname))
-                  (%def-fun fname))
-             ,@(if io?
-                   (let ([inlist (filter-map (lambda (var io i)
-                                               (and (memq io '(#f in inout)) 
-                                                    (not (assq i lvars))
-                                                    var) )
-                                             vars io (iota (length vars))) ] )
-                     `((,(rename 'define) (,name2 ,@inlist) 
-                        ,(make-inout-wrapper fname rtype vars args io lvars) ) ) )
-                   '() ) ) ) ) ) ) )
+	      ,@(if io? `((,(rename 'declare) (hide ,fname))) '())
+	      (,(rename 'define) ,fname
+		,(c-exception-wrapper (->string name) args cb rtype))
+	      ,@(if io?
+		    (let ([inlist (filter-map (lambda (var io i)
+						(and (memq io '(#f in inout)) 
+						     (not (assq i lvars))
+						     var) )
+					      vars io (iota (length vars))) ] )
+		      `((,(rename 'define) (,name2 ,@inlist) 
+			  ,(make-inout-wrapper fname rtype vars args io lvars) ) ) )
+		    '() ) ) ) ) ) ) )
 
 (define (make-inout-wrapper rname rtype vars args io lvars)
   (let ([tmp (gensym)] 
@@ -1006,30 +958,16 @@
    (reverse items) ) )
 
 (define (process-struct-member-def m sname name type mut?)
-  (let* ([getter (fix-name (string-append (->string sname) "-" (->string name)))] ; name of procedure
-         [args `((c-pointer (,m ,sname)) s)] ; foreign-lambda*-style arguments
-         ;; getter body
-         [g  (if (struct-by-val? type)
-                 ;; getter body where type is another struct
-                 `(,(rename 'lambda) (s)
-                   (let ([blob (location
-                                (,(rename 'make-blob)
-                                 (,(rename 'foreign-value) ,(sprintf "sizeof~A" type) int)) )]
-                         [copy-struct! (,(rename 'foreign-lambda*) void (((c-pointer ,type) _dest) ,args)
-                                        ,(sprintf "*_dest = s->~A;" name))])
-                     (copy-struct! blob s)
-                     blob))
-                 ;; getter body for primitive types
-                 `(,(rename 'foreign-lambda*) ,type (,args)
-                   ,(sprintf "return(s->~A);" name) )) ]
-         ;; setter body
-         [s  `(,(rename 'foreign-lambda*) void (,args (,type x) )
-               ,(sprintf "s->~A = x;" name) ) ])
-    (emit (if mut?
-              (if (struct-by-val? type)
-                  (error "mutable nested structs not supported" (conc type " " name " in struct " sname))
-                  `(,(rename 'define) ,getter (,(rename 'getter-with-setter) ,g ,s)))
-              `(,(rename 'define) ,getter ,g) ) ) ) )
+  (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
+    (let ((g `(,(rename 'foreign-lambda*) ,type (((c-pointer (,m ,sname)) s))
+	       ,(sprintf "return(s->~A);" name) ) )
+	  (s `(,(rename 'foreign-lambda*) void (((c-pointer (,m ,sname)) s)
+						(,type x) )
+		,(sprintf "s->~A = x;" name) ) ) )
+      (emit
+       (if mut?
+	   `(,(rename 'define) ,getter (,(rename 'getter-with-setter) ,g ,s))
+	   `(,(rename 'define) ,getter ,g) ) ) ) ) )
 
 (define (process-class-def name cname basenames)
   (let ([destr (gensym)]
