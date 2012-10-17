@@ -3,8 +3,8 @@
 ((synopsis "Automatically generate bindings from C/C++ declarations")
  (category ffi)
  (license "public domain")
- (needs silex matchable coops regex)
+ (needs silex matchable coops regex make)
  (doc-from-wiki #t)
  (author "[[felix winkelmann]]")
- (files "bind-translator.scm" "bind.release-info" "bind.scm" "bind.meta" "cplusplus-object.scm" "c.l" "bind.setup" "runsilex.scm" "tests/cplusplus-test.scm" "tests/run.scm" "tests/tests.scm" "chicken-bind.scm"))
+ (files "bind-translator.scm" "bind.release-info" "bind.scm" "bind.meta" "cplusplus-object.scm" "c.l" "bind.setup" "runsilex.scm" "tests/cplusplus-test.scm" "tests/run.scm" "tests/tests.scm" "tests/struct-passing-tests.scm" "chicken-bind.scm"))
 
