@@ -785,8 +785,8 @@
 
 (define (emit x)
   (let ((dbg (memq 'F ##compiler#debugging-chicken)))
-    (when dbg (pp (strip-syntax x) (current-error-port)))
-    (set! processed-output (cons x processed-output) ) ) )
+    (when dbg (pp (strip-syntax (bind-adapt x)) (current-error-port)))
+    (set! processed-output (cons (bind-adapt x) processed-output) ) ))
 
 (define (process-macro-def name type)
   (if (memq type '(* _))
