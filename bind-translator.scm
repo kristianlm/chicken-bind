@@ -1178,6 +1178,8 @@
 		[_ (err)] ) ]
 	     [else (err)] ) ] ) ) )
 
+;; rename from foreign name to scheme-name
+;; see bind-rename
 (define (fix-name str #!optional (use-prefix #t))
   (let ([a (assq (->symbol str) rename-list)])
     (if a 
