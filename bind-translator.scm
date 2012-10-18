@@ -23,6 +23,7 @@
   `(,(r 'cons) ,(cadr x) yyline))
 
 (include "c.l.scm")
+(include "bind-translator-adapters.scm")
 
 (define mutable-fields #f)
 (define use-finalizers #f)

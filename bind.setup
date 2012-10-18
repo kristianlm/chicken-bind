@@ -9,7 +9,7 @@
 	(run (csi -s runsilex.scm)) )
        ("chicken-bind" ("chicken-bind.scm" "bind-translator.so")
 	(compile  -O3 -d0 -S chicken-bind.scm) )
-       ("bind-translator.so" ("bind-translator.scm" "c.l.scm")
+       ("bind-translator.so" ("bind-translator.scm" "bind-translator-adapters.scm" "c.l.scm")
 	(compile  -sS -O3 -d0 bind-translator.scm -JS))
        ("bind-translator.import.so" ("bind-translator.so")
 	(compile  -s -O3 -d0 bind-translator.import.scm) )
