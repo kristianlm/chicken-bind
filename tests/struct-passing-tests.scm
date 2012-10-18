@@ -18,18 +18,10 @@
 ;; testing nested structs
 (bind* "
 typedef struct vct_point { float x, y ; }  vct_point ;
-typedef struct vct_line  { vct_point a, b ; } vct_line ;
 ")
 
 (define p1 (vct:make-point 1 2))
 (define p2 (vct:make-point -1 -2))
-(define line (vct:make-line p1 p2))
-
-(assert (= (vct:point-x (vct:line-a line)) 1))
-(assert (= (vct:point-y (vct:line-a line)) 2))
-
-(assert (= (vct:point-x (vct:line-b line)) -1))
-(assert (= (vct:point-y (vct:line-b line)) -2))
 
 
 ;; testing struct-by-val in arguments
