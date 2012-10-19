@@ -204,7 +204,7 @@
                (define (,sfunc-name ,@vars)
                  (let ((blob-location (location (make-blob
                                                  (foreign-value
-                                                  ,(conc "sizeof" (flatten rtype))
+                                                  ,(conc "sizeof" (flatten rtype)) ;; fix
                                                   int)))))
                    (,(rename-overwrite-func sfunc-name) blob-location ,@vars)
                    blob-location))))))
