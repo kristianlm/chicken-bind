@@ -160,6 +160,26 @@
                          ,(if (eq? rtype 'void)
                               (conc fcall ";")
                               (conc "return(" fcall ");"))))))
+    ;; match foreign-lambda* where body is cexp, and make struct-by-val
+    ;; argtypes into their pointer-equivalents, and dereference any
+    ;; occurance of them in the cexp.
+    (('foreign-lambda* rtype argdefs (? list? body ...))
+     ;; wrap any struct-by-val argument into its pointer equivalent
+     (define (wrap-structs-in-pointer a)
+       (if (struct-by-val? a) (wrap-in-pointer a) a))
+
+     ;; find variables that reference anything in argdefs,
+     ;; and if they are structs, dereference them (because we turned
+     ;; them into pointers in wrapped-argdefs)
+     (define (transform-struct-varrefs a)
+       (if (and (symbol? a)
+                (struct-by-val? (foreign-type-of a argdefs)))
+           (list 'deref a) #f))
+
+     (let ([wrapped-argdefs (map wrap-structs-in-pointer argdefs)])
+       `(foreign-lambda* ,rtype ,wrapped-argdefs
+                    ;; transform our cexp code:
+                    ,(transform body transform-struct-varrefs))))
     (else #f)))
 
 
