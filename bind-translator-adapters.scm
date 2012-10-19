@@ -191,16 +191,15 @@
 (define (transform-struct-rtype x #!optional (rename-overwrite-func
                                               (lambda (f) (string->symbol (conc f "!")))))
   (match (strip-syntax x)
-    (('define sfunc-name ('foreign-lambda rtype cfunc-name argtypes ...))
+    (('define sfunc-name ('foreign-lambda* rtype argdefs (? list? body ...)))
      (and (struct-by-val? rtype)
-          (let* ([vars (map make-variable argtypes)]
-                 [argdefs (map wrap-in-variable argtypes vars)])
+          (let ([vars (map (lambda (argdef) (cadr argdef)) argdefs)])
             `(begin
                (define ,(rename-overwrite-func sfunc-name)
                  (foreign-lambda* void
                                   ((,(wrap-in-pointer rtype) destination) ,@argdefs)
                                   (= (deref "destination")
-                                     (,(conc cfunc-name) ,@vars))))
+                                     ,body)))
                (define (,sfunc-name ,@vars)
                  (let ((blob-location (location (make-blob
                                                  (foreign-value
@@ -216,8 +215,8 @@
   (fold (lambda (transformer result)
           (transform result transformer))
         x
-        (list transform-struct-rtype
-              foreign-lambda->foreign-lambda*
+        (list foreign-lambda->foreign-lambda*
+              transform-struct-rtype
               transform-struct-argtypes
               transform-compile-foreign-lambda*)))
 
