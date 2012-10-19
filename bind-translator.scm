@@ -555,12 +555,13 @@
 	(emit
 	 `(,(rename 'define) ,maker
 	   (,(rename 'foreign-lambda*) (c-pointer (,m ,sname)) ,fields
-	    ,(sprintf "~A ~A *tmp_ = (~A ~A *)C_malloc(sizeof(~A ~A));~%~AC_return(tmp_);"
-	       m sname m sname m sname
-	       (string-intersperse
-		(map (lambda (f) (sprintf "tmp_->~A = ~A;~%" (cadr f) (cadr f)))
-		     fields)
-		"") ) ) ) ) ) ) ) )
+	    ;; emit cexp, allowing post-processing
+            (stmt
+             (= ,(sprintf "~A ~A *tmp_" m sname)
+                ,(sprintf " (~A ~A *)C_malloc(sizeof(~A ~A))" m sname m sname))
+             ,@(map (lambda (f) `(= (-> "tmp_" ,(conc (cadr f))) ,(cadr f)))
+                    fields)
+             (return tmp_) ) ) ) ) ) ) ) )
 
 (define (parse-typedef ts)
   (let ([box (vector #f)])
@@ -942,7 +943,8 @@
 (define (process-struct-member-def m sname name type mut?)
   (let ([getter (fix-name (string-append (->string sname) "-" (->string name)))])
     (let ((g `(,(rename 'foreign-lambda*) ,type (((c-pointer (,m ,sname)) s))
-	       ,(sprintf "return(s->~A);" name) ) )
+               ;; cexp expression:
+	       (-> s ,name) ) )
 	  (s `(,(rename 'foreign-lambda*) void (((c-pointer (,m ,sname)) s)
 						(,type x) )
 		,(sprintf "s->~A = x;" name) ) ) )
