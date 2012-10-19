@@ -171,19 +171,13 @@
     (('define sfunc-name ('foreign-lambda rtype cfunc-name argtypes ...))
      (and (struct-by-val? rtype)
           (let* ([vars (map make-variable argtypes)]
-                 [argdefs (map wrap-in-variable argtypes vars)]
-                 [wrapped-argdefs (map (lambda (a)
-                                         (if (struct-by-val? a)
-                                             (wrap-in-pointer a) a))
-                                       argdefs)])
+                 [argdefs (map wrap-in-variable argtypes vars)])
             `(begin
                (define ,(rename-overwrite-func sfunc-name)
                  (foreign-lambda* void
-                             ((,(wrap-in-pointer rtype) destination)
-                              ,@wrapped-argdefs)
-                             ,(conc "*destination = "
-                                    (foreign-function-call cfunc-name argdefs struct-by-val?)
-                                    ";")))
+                                  ((,(wrap-in-pointer rtype) destination) ,@argdefs)
+                                  (= (deref "destination")
+                                     (,(conc cfunc-name) ,@vars))))
                (define (,sfunc-name ,@vars)
                  (let ((blob-location (location (make-blob
                                                  (foreign-value
