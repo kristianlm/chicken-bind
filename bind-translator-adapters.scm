@@ -142,6 +142,8 @@
                 `(,(loop (car arg-def)) ,@(cdr arg-def))
                 arg-def)))) )
 
+(define (foreign-type-of variable argdefs)
+  (rassoc (list variable) argdefs equal?))
 
 ;; find argument which pass structs by value and dereference it in C.
 (define (transform-struct-argtypes x)
@@ -198,5 +200,7 @@
           (transform result transformer))
         x
         (list transform-struct-rtype
-              transform-struct-argtypes)))
+              transform-struct-argtypes
+              transform-compile-foreign-lambda*
+              )))
 
