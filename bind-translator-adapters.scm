@@ -62,9 +62,12 @@
     (('foreign-lambda* rtype args (? list? body))
      `(foreign-lambda* ,rtype ,args
                        ,(let ([c-code (cexp->string body)])
-                          (conc (if (not (eq? rtype 'void))
-                                    (conc "return(" c-code ");")
-                                    (conc c-code ";"))))))
+                          (if (cexp-expression? body)
+                              ;; add return(...) automatically
+                              (if (not (eq? rtype 'void))
+                                  (conc "return(" c-code ");")
+                                  (conc c-code ";"))
+                              c-code))))
     (else #f)))
 
 ;; stolen & modified from chicken-core's compiler.scm:
@@ -201,7 +204,8 @@
                                               (lambda (f) (string->symbol (conc f "!")))))
   (match (strip-syntax x)
     (('define sfunc-name ('foreign-lambda* rtype argdefs (? list? body ...)))
-     (and (struct-by-val? rtype)
+     ;; transform if return-type is a struct and if cexp is one simple expression
+     (and (struct-by-val? rtype) (cexp-expression? body)
           (let ([vars (map (lambda (argdef) (cadr argdef)) argdefs)])
             `(begin
                (define ,(rename-overwrite-func sfunc-name)
