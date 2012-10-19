@@ -1,0 +1,18 @@
+
+* chicken-bind
+
+A utility to create bindings to C/C++ in Chicken Scheme. This is an
+unofficial clone of [[http://wiki.call-cc.org/eggref/4/bind][this]] Chicken Egg.  Sometimes, patches from this
+repo end in upstream.
+
+* Some TODOs
+
+** TODO make it all hygienic
+** support nested structs
+*** DONE support for getters in nested structs
+*** TODO support for mutable nested structs
+** TODO make api for users
+** tests
+*** TODO test mutable nested structs
+*** TODO test cexp separately
+*** TODO test user api at some point
