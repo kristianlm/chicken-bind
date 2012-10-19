@@ -25,12 +25,12 @@
                     (else #f)))
                  (string->list s))))
 
-;; cexp: an sexp with C semantics. we are using this intermediate
-;; representation of C-code so that we can manipulate it. it is very
-;; basic, but allows us to do things like argument casting,
-;; return-type conversion and similar things.
-;; (cexp->string '(= (deref "destination") ("vadd" v1 v2)))
-;; (cexp->string '("return" (+ (deref x) u)))
+;; cexp: an sexp with C semantics. used in foreign-lambda* instead of
+;; flat strings. we are using this intermediate representation of
+;; C-code so that we can manipulate it. it is very basic, but allows
+;; us to do things like argument casting, return-type conversion and
+;; similar things. (cexp->string '(= (deref "destination") ("vadd" v1
+;; v2))) (cexp->string '("return" (+ (deref x) u)))
 (define (cexp->string cexp)
   (define (xpr->str cexp)
     (match cexp
