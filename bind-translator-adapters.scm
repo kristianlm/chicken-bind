@@ -25,6 +25,39 @@
                     (else #f)))
                  (string->list s))))
 
+;; cexp: an sexp with C semantics. we are using this intermediate
+;; representation of C-code so that we can manipulate it. it is very
+;; basic, but allows us to do things like argument casting,
+;; return-type conversion and similar things.
+;; (cexp->string '(= (deref "destination") ("vadd" v1 v2)))
+;; (cexp->string '("return" (+ (deref x) u)))
+(define (cexp->string cexp)
+  (let loop ([cexp cexp])
+    (match cexp
+      (('= var x) (conc (loop var) " = " (loop x)))
+      (('* args ...) (conc (intersperse (map loop args) "*")))
+      (('+ args ...) (conc (intersperse (map loop args) "+")))
+      (('-> struct x) (conc (loop struct) "->" (loop x)))
+      (('= var x) (conc (loop var) " = " (loop x)))
+      (('deref x) (conc "*" (loop x)))
+      (((? string? str) args ...) (conc str (intersperse (map loop args) ",")))
+      ((? string? a) a)
+      ((? symbol? a) (symbol->string a))
+      ((? number? a) (number->string a))
+      (else (error "invalid c-exp" cexp)))))
+
+;; some foreign-lambda* expressions contain cexp, convert this to C as a
+;; last step (not processable after this, so should be last step)
+(define (transform-compile-foreign-lambda* x)
+  (match x
+    (('foreign-lambda* rtype args (? list? body))
+     `(foreign-lambda* ,rtype ,args
+                       ,(let ([c-code (cexp->string body)])
+                          (conc (if (not (eq? rtype 'void))
+                                    (conc "return(" c-code ");")
+                                    (conc c-code ";"))))))
+    (else #f)))
+
 ;; stolen & modified from chicken-core's compiler.scm:
 ;; try to describe a foreign-lambda type specification
 ;; eg. (type->symbol '(c-pointer (struct "point"))) => point_ptr
