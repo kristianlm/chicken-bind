@@ -121,8 +121,12 @@
 (define (make-variable argtype #!optional (rename gensym))
   (rename (argtype->symbol argtype)))
 
+;; (wrap-in-variable 'float) => float12345
+;; (wrap-in-variable 'float 'var1) => (float var1)
+;; convenience rename: there may be several arguments of same type
 (define (wrap-in-variable argtype #!optional (variable #f) (var-rename gensym))
-  (list argtype (var-rename (or variable (argtype->symbol argtype)))))
+  (list argtype (or variable (var-rename (argtype->symbol argtype)))))
+
 
 
 ;; add a pointer to a argtype or argdef (with
