@@ -47,7 +47,7 @@
       (else (error "invalid c-exp" cexp))))
   (match cexp
     (('stmt statements ...) (apply conc (map (cut conc <> ";") (map cexp->string statements))))
-    (('return expr) (conc "return " (xpr->str expr) ";"))
+    (('return expr) (conc "return(" (xpr->str expr) ");"))
     (exp (xpr->str cexp))))
 
 (define (cexp-expression? cexp)
