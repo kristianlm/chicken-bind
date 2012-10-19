@@ -145,42 +145,45 @@
 (define (foreign-type-of variable argdefs)
   (rassoc (list variable) argdefs equal?))
 
-;; find argument which pass structs by value and dereference it in C.
-(define (transform-struct-argtypes x)
+;; make foreign-lambda into its foreign-lambda* equivalent (with cexp)
+;; so that transform-struct-argtypes can handle it
+(define (foreign-lambda->foreign-lambda* x)
   (match (strip-syntax x)
     (('foreign-lambda rtype cfunc-name argtypes ...)
      (and (any struct-by-val? argtypes)
-          (let* ([argdefs (map wrap-in-variable argtypes)]
-                 [wrapped-argdefs (map (lambda (a)
-                                         (if (struct-by-val? a)
-                                             (wrap-in-pointer a) a))
-                                       argdefs)]
-                 [fcall (foreign-function-call cfunc-name argdefs struct-by-val?)])
-            `(foreign-lambda* ,rtype ,wrapped-argdefs
-                         ,(if (eq? rtype 'void)
-                              (conc fcall ";")
-                              (conc "return(" fcall ");"))))))
-    ;; match foreign-lambda* where body is cexp, and make struct-by-val
-    ;; argtypes into their pointer-equivalents, and dereference any
-    ;; occurance of them in the cexp.
-    (('foreign-lambda* rtype argdefs (? list? body ...))
-     ;; wrap any struct-by-val argument into its pointer equivalent
-     (define (wrap-structs-in-pointer a)
-       (if (struct-by-val? a) (wrap-in-pointer a) a))
-
-     ;; find variables that reference anything in argdefs,
-     ;; and if they are structs, dereference them (because we turned
-     ;; them into pointers in wrapped-argdefs)
-     (define (transform-struct-varrefs a)
-       (if (and (symbol? a)
-                (struct-by-val? (foreign-type-of a argdefs)))
-           (list 'deref a) #f))
-
-     (let ([wrapped-argdefs (map wrap-structs-in-pointer argdefs)])
-       `(foreign-lambda* ,rtype ,wrapped-argdefs
-                    ;; transform our cexp code:
-                    ,(transform body transform-struct-varrefs))))
+          (let* ([vars (map make-variable argtypes)]
+                 [argdefs (map wrap-in-variable argtypes vars)])
+            `(foreign-lambda* ,rtype ,argdefs
+                              (,cfunc-name ,@vars)))))
     (else #f)))
+
+
+;; find argument which pass structs by value and dereference it in C.
+(define transform-struct-argtypes
+  (lambda (x)
+    (match (strip-syntax x)
+      ;; match foreign-lambda* where body is cexp, and make struct-by-val
+      ;; argtypes into their pointer-equivalents, and dereference any
+      ;; occurance of them in the cexp.
+      (('foreign-lambda* rtype argdefs (? list? body ...))
+
+       ;; wrap any struct-by-val argument into its pointer equivalent
+       (define (wrap-structs-in-pointer a)
+         (if (struct-by-val? a) (wrap-in-pointer a) a))
+
+       ;; find variables that reference anything in argdefs,
+       ;; and if they are structs, dereference them (because we turned
+       ;; them into pointers in wrapped-argdefs)
+       (define (transform-struct-varrefs a)
+         (if (and (symbol? a)
+                  (struct-by-val? (foreign-type-of a argdefs)))
+             (list 'deref a) #f))
+
+       (let ([wrapped-argdefs (map wrap-structs-in-pointer argdefs)])
+         `(foreign-lambda* ,rtype ,wrapped-argdefs
+                      ;; transform our cexp code:
+                      ,(transform body transform-struct-varrefs))))
+      (else #f))))
 
 
 ;; check for struct-by-value rtype, then add destination argument in
@@ -214,7 +217,7 @@
           (transform result transformer))
         x
         (list transform-struct-rtype
+              foreign-lambda->foreign-lambda*
               transform-struct-argtypes
-              transform-compile-foreign-lambda*
-              )))
+              transform-compile-foreign-lambda*)))
 
