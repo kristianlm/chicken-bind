@@ -20,7 +20,8 @@
 
                        transform
 
-                       foreign-type-struct-name)
+                       foreign-type-struct-name
+                       foreign-variable-type)
 
 (import chicken scheme)
 (use srfi-1 data-structures matchable)
@@ -162,8 +163,10 @@
                 `(,(loop (car arg-def)) ,@(cdr arg-def))
                 arg-def)))) )
 
-(define (foreign-type-of variable argdefs)
-  (rassoc (list variable) argdefs equal?))
+;; (foreign-variable-type 'var2 '((float var2) ((const (struct "foo")) var1)))
+(define (foreign-variable-type variable argdefs)
+  (let ([found (rassoc (list variable) argdefs equal?)])
+    (if found (car found) #f)))
 
 ;; make foreign-lambda into its foreign-lambda* equivalent (with cexp)
 ;; so that transform-struct-argtypes can handle it
@@ -195,7 +198,7 @@
        ;; them into pointers in wrapped-argdefs)
        (define (transform-struct-varrefs a)
          (if (and (symbol? a)
-                  (struct-by-val? (foreign-type-of a argdefs)))
+                  (struct-by-val? (foreign-variable-type a argdefs)))
              (list 'deref a) #f))
 
        (let ([wrapped-argdefs (map wrap-structs-in-pointer argdefs)])
