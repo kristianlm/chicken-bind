@@ -13,6 +13,12 @@
 (import chicken scheme)
 (use srfi-1 data-structures matchable)
 
+(define (foreign-lambda-family? symbol)
+  (memq symbol '(foreign-lambda foreign-safe-lambda)))
+
+(define (foreign-lambda*-family? symbol)
+  (memq symbol '(foreign-lambda* foreign-safe-lambda* foreign-primitive)))
+
 
 
 ;; outputs a string which could be used as a C variable name.
@@ -63,16 +69,16 @@
 ;; some foreign-lambda* expressions contain cexp, convert this to C as a
 ;; last step (not processable after this, so should be last step)
 (define (transform-compile-foreign-lambda* x)
-  (match x
-    (('foreign-lambda* rtype args (? list? body))
-     `(foreign-lambda* ,rtype ,args
-                       ,(let ([c-code (cexp->string body)])
-                          (if (cexp-expression? body)
-                              ;; add return(...) automatically
-                              (if (not (eq? rtype 'void))
-                                  (conc "return(" c-code ");")
-                                  (conc c-code ";"))
-                              c-code))))
+  (match (strip-syntax x)
+    (((? foreign-lambda*-family? fl) rtype args (? list? body))
+     `(,fl ,rtype ,args
+          ,(let ([c-code (cexp->string body)])
+             (if (cexp-expression? body)
+                 ;; add return(...) automatically
+                 (if (not (eq? rtype 'void))
+                     (conc "return(" c-code ");")
+                     (conc c-code ";"))
+                 c-code))))
     (else #f)))
 
 ;; stolen & modified from chicken-core's compiler.scm:
@@ -149,12 +155,11 @@
 ;; so that transform-struct-argtypes can handle it
 (define (foreign-lambda->foreign-lambda* x)
   (match (strip-syntax x)
-    (('foreign-lambda rtype cfunc-name argtypes ...)
-     (and (any struct-by-val? argtypes)
-          (let* ([vars (map make-variable argtypes)]
-                 [argdefs (map wrap-in-variable argtypes vars)])
-            `(foreign-lambda* ,rtype ,argdefs
-                              (,cfunc-name ,@vars)))))
+    (((? foreign-lambda-family? fl) rtype cfunc-name argtypes ...)
+     (let* ([vars (map make-variable argtypes)]
+            [argdefs (map wrap-in-variable argtypes vars)])
+       `(,(string->symbol (conc fl "*")) ,rtype ,argdefs
+             (,cfunc-name ,@vars))))
     (else #f)))
 
 
@@ -165,7 +170,7 @@
       ;; match foreign-lambda* where body is cexp, and make struct-by-val
       ;; argtypes into their pointer-equivalents, and dereference any
       ;; occurance of them in the cexp.
-      (('foreign-lambda* rtype argdefs (? list? body ...))
+      (((? foreign-lambda*-family? fl) rtype argdefs (? list? body ...))
 
        ;; wrap any struct-by-val argument into its pointer equivalent
        (define (wrap-structs-in-pointer a)
@@ -180,9 +185,9 @@
              (list 'deref a) #f))
 
        (let ([wrapped-argdefs (map wrap-structs-in-pointer argdefs)])
-         `(foreign-lambda* ,rtype ,wrapped-argdefs
-                      ;; transform our cexp code:
-                      ,(transform body transform-struct-varrefs))))
+         `(,fl ,rtype ,wrapped-argdefs
+                           ;; transform our cexp code:
+                           ,(transform body transform-struct-varrefs))))
       (else #f))))
 
 
@@ -191,16 +196,16 @@
 (define (transform-struct-rtype x #!optional (rename-overwrite-func
                                               (lambda (f) (string->symbol (conc f "!")))))
   (match (strip-syntax x)
-    (('define sfunc-name ('foreign-lambda* rtype argdefs (? list? body ...)))
+    (('define sfunc-name ((? foreign-lambda*-family? fl) rtype argdefs (? list? body ...)))
      ;; transform if return-type is a struct and if cexp is one simple expression
      (and (struct-by-val? rtype) (cexp-expression? body)
           (let ([vars (map (lambda (argdef) (cadr argdef)) argdefs)])
             `(begin
                (define ,(rename-overwrite-func sfunc-name)
-                 (foreign-lambda* void
-                                  ((,(wrap-in-pointer rtype) destination) ,@argdefs)
-                                  (= (deref "destination")
-                                     ,body)))
+                 (,fl void
+                      ((,(wrap-in-pointer rtype) destination) ,@argdefs)
+                      (= (deref "destination")
+                         ,body)))
                (define (,sfunc-name ,@vars)
                  (let ((blob-location (location (make-blob
                                                  (foreign-value
