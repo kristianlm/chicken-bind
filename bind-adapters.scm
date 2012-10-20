@@ -1,12 +1,24 @@
 ;;; This is a helper-module to bind which provides `adapters` and
 ;;; helper functions to manipulate foreign argument types.
 
-;;; Bind adapters allow transforming foreign bindings (usually as foreign-lambda
-;;; expressions) that the bind macros produce. It is useful for
-;;; altering argument types.
+;;; Bind adapters are procedures that take a form as an argument and
+;;; returns a new form or #f to not modify it.
 ;;;
-;;; The default adapter will transform any foreign-lambda statements with a
-;;; struct-by-value return-type.
+;;; The order in which the transformers are run are important. The
+;;; first transformer modifies all forein-lambda forms into their
+;;; foreign-lambda* forms. This makes subsequent matching easier:
+;;; adapter only have to worry about foreign-lambda* or foreign-safe-lambda* forms.
+;;;
+;;;
+;;; foreign-lambda* forms can include `cexp` which is a very (very) limited
+;;; for of lisp-like C syntax. It is used to provide some semantical
+;;; abilities to foreign C-bodies. The last adapter converts this into
+;;; normal C in the last step. See cexp->string for its grammar.
+;;;
+;;; The default adapters convert struct-by-val in arguments and return
+;;; types automatically.
+
+
 (module bind-adapters (bind-adapt
 
                        add-adapter
@@ -63,12 +75,12 @@
 (define (cexp->string cexp)
   (define (xpr->str cexp)
     (match cexp
-      (('= var x) (conc (xpr->str var) " = " (xpr->str x)))
-      (('* args ...) (conc (intersperse (map xpr->str args) "*")))
-      (('+ args ...) (conc (intersperse (map xpr->str args) "+")))
+      (('= var x)     (conc (xpr->str var) " = " (xpr->str x)))
+      (('* args ...)  (conc (intersperse (map xpr->str args) "*")))
+      (('+ args ...)  (conc (intersperse (map xpr->str args) "+")))
       (('-> struct x) (conc (xpr->str struct) "->" (xpr->str x)))
-      (('= var x) (conc (xpr->str var) " = " (xpr->str x)))
-      (('deref x) (conc "*" (xpr->str x)))
+      (('= var x)     (conc (xpr->str var) " = " (xpr->str x)))
+      (('deref x)     (conc "*" (xpr->str x)))
       (((? string? str) args ...) (conc str (intersperse (map xpr->str args) ",")))
       ((? string? a) a)
       ((? symbol? a) (symbol->string a))
