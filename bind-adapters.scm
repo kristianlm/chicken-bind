@@ -42,6 +42,8 @@
 ;; us to do things like argument casting, return-type conversion and
 ;; similar things. (cexp->string '(= (deref "destination") ("vadd" v1
 ;; v2))) (cexp->string '("return" (+ (deref x) u)))
+;;
+;; this is the very small cexp code-generator:
 (define (cexp->string cexp)
   (define (xpr->str cexp)
     (match cexp
@@ -57,7 +59,7 @@
       ((? number? a) (number->string a))
       (else (error "invalid c-exp" cexp))))
   (match cexp
-    (('stmt statements ...) (apply conc (map (cut conc <> ";") (map cexp->string statements))))
+    (('stmt statements ...) (apply conc (map (cut conc <> ";\n") (map cexp->string statements))))
     (('return expr) (conc "return(" (xpr->str expr) ");"))
     (exp (xpr->str cexp))))
 
