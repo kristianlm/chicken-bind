@@ -1278,6 +1278,7 @@
       [('const t) (rec t)]
       [('function . _) '<pointer>]
       [('instance _ c) c]
+      [('instance-ref _ c) c]
       [((or 'c-pointer 'ref) x)
        (if io
 	   (rec x)
