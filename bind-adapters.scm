@@ -255,7 +255,7 @@
   (list transform-compile-foreign-lambda*))
 
 (define (add-cexp-adapter adapter)
-  (set! *cexp-adapterst* (cons adapter *cexp-adapters*)))
+  (set! *cexp-adapters* (cons adapter *cexp-adapters*)))
 
 (define (remove-all-cexp-adapters)
   (set! *cexp-adapters* '()))
