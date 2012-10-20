@@ -17,13 +17,12 @@
 			 no-c-syntax-checks)
 
 (import scheme chicken)
-(use extras data-structures files ports silex srfi-13 srfi-1 utils regex matchable)
+(use bind-adapters extras data-structures files ports silex srfi-13 srfi-1 utils regex matchable)
 
 (define-syntax (tok x r c)
   `(,(r 'cons) ,(cadr x) yyline))
 
 (include "c.l.scm")
-(include "bind-translator-adapters.scm")
 
 (define mutable-fields #f)
 (define use-finalizers #f)

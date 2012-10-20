@@ -9,19 +9,27 @@
 	(run (csi -s runsilex.scm)) )
        ("chicken-bind" ("chicken-bind.scm" "bind-translator.so")
 	(compile  -O3 -d0 -S chicken-bind.scm) )
-       ("bind-translator.so" ("bind-translator.scm" "bind-translator-adapters.scm" "c.l.scm")
+
+       ("bind-translator.so" ("bind-translator.scm" "bind-adapters.so" "c.l.scm")
 	(compile  -sS -O3 -d0 bind-translator.scm -JS))
        ("bind-translator.import.so" ("bind-translator.so")
 	(compile  -s -O3 -d0 bind-translator.import.scm) )
-       ("bind.so" ("bind.scm" "bind-translator.import.so")
+
+       ("bind-adapters.so" ("bind-adapters.scm")
+        (compile -s -O3 -d0 bind-adapters.scm -JS))
+       ("bind-adapters.import.so" ("bind-adapters.so")
+	(compile -s -O3 -d0 bind-adapters.import.scm) )
+
+       ("bind.so" ("bind.scm" "bind-translator.import.so" "bind-adapters.import.so")
 	(compile  -s -O3 -d0 bind.scm -JS))
        ("bind.import.so" ("bind.import.scm")
 	(compile  -s -O3 -d0 bind.import.scm))
+
        ("cplusplus-object.so" ("cplusplus-object.scm")
 	(compile -s -O3 -S -d0 cplusplus-object.scm -J))
        ("cplusplus-object.import.so" ("cplusplus-object.import.scm")
 	(compile -s -O3 -d0 cplusplus-object.import.scm)))
-  '("bind.so" "bind-translator.so" 
+  '("bind.so" "bind-translator.so" "bind-adapters.so"
     "bind.import.so" "bind-translator.import.so"
     "cplusplus-object.so" "cplusplus-object.import.so"
     "chicken-bind") )
@@ -35,6 +43,11 @@
 (install-extension
  'cplusplus-object
  '("cplusplus-object.so" "cplusplus-object.import.so")
+ `((version ,version)))
+
+(install-extension
+ 'bind-adapters
+ '("bind-adapters.so" "bind-adapters.import.so")
  `((version ,version)))
 
 (install-program

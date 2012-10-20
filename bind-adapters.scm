@@ -7,8 +7,13 @@
 ;;;
 ;;; The default adapter will transform any foreign-lambda statements with a
 ;;; struct-by-value return-type.
+(module bind-adapters (bind-adapt
+                       add-adapter)
 
-(import srfi-1 data-structures scheme )
+(import chicken scheme)
+(use srfi-1 data-structures matchable)
+
+
 
 ;; outputs a string which could be used as a C variable name.
 ;; e.g. "unsigned-int" => "unsigned_int"
@@ -216,3 +221,4 @@
               transform-struct-argtypes
               transform-compile-foreign-lambda*)))
 
+)
