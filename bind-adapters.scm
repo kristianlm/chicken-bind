@@ -8,7 +8,19 @@
 ;;; The default adapter will transform any foreign-lambda statements with a
 ;;; struct-by-value return-type.
 (module bind-adapters (bind-adapt
-                       add-adapter)
+
+                       add-adapter
+                       remove-all-adapters
+
+                       add-cexp-adapter
+                       remove-all-cexp-adapters
+
+                       foreign-lambda-family?
+                       foreign-lambda*-family?
+
+                       transform
+
+                       foreign-type-struct-name)
 
 (import chicken scheme)
 (use srfi-1 data-structures matchable)
@@ -116,7 +128,7 @@
 
 ;; find the name of the struct in arg-def.
 ;; arg-def eg: (const (struct "point")) => "point"
-(define (struct-name arg-def)
+(define (foreign-type-struct-name arg-def)
   (let loop ((arg-def arg-def))
     (match arg-def
       [('struct sname) sname]
@@ -124,7 +136,7 @@
       [else (if (list? arg-def) (loop (car arg-def)) #f)])))
 
 (define (struct-by-val? s)
-  (if (struct-name s) #t #f))
+  (if (foreign-type-struct-name s) #t #f))
 
 (define (make-variable argtype #!optional (rename gensym))
   (rename (argtype->symbol argtype)))
@@ -219,10 +231,25 @@
     (else #f)))
 
 (define *adapter-list*
-  '())
+  (list transform-struct-rtype
+                      transform-struct-argtypes))
 
 (define (add-adapter adapter)
   (set! *adapter-list* (cons adapter *adapter-list*)))
+
+(define (remove-all-adapters)
+  (set! *adapter-list* '()))
+
+
+(define *cexp-adapters*
+  (list transform-compile-foreign-lambda*))
+
+(define (add-cexp-adapter adapter)
+  (set! *cexp-adapterst* (cons adapter *cexp-adapters*)))
+
+(define (remove-all-cexp-adapters)
+  (set! *cexp-adapters* '()))
+
 
 ;; called on every (emit ...) from bind-translator
 (define (bind-adapt x)
@@ -231,8 +258,6 @@
         x
         (append (list foreign-lambda->foreign-lambda*)
                 *adapter-list*
-                (list transform-struct-rtype
-                      transform-struct-argtypes
-                      transform-compile-foreign-lambda*))))
+                *cexp-adapters*)))
 
 )
