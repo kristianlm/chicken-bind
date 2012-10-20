@@ -185,8 +185,8 @@
 
 ;; add a pointer to a argtype or argdef (with
 ;; or without varname)
-;; ((const (struct "mystruct")) name)
-;;     => (((c-pointer (const ... ))) name)
+;; (wrap-in-pointer '(const (struct "mystruct")))
+;;     => (((c-pointer (const ... ))))
 (define (wrap-in-pointer arg-def)
   (let loop ((arg-def arg-def))
     (match arg-def
