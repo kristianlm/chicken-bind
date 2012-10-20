@@ -11,7 +11,10 @@ repo end in upstream.
 ** support nested structs
 *** DONE support for getters in nested structs
 *** TODO support for mutable nested structs
-** TODO make api for users
+** DONE make api for users
+   now users can do (import-for-syntax bind-adapters) and
+   (begin-for-syntax (add-adapter (lambda (x ...)))
+** TODO convert unmodified foreign-lambda* forms back into foreign-lambda
 ** tests
 *** TODO test mutable nested structs
 *** TODO test cexp separately
