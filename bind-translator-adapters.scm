@@ -113,23 +113,6 @@
 (define (struct-by-val? s)
   (if (struct-name s) #t #f))
 
-
-;; generate a c-function call as string from
-;; argument definitions. ((c-pointer integer) var1)
-;;     => "func(var1)"
-(define (foreign-function-call func-name argdefs #!optional (deref? struct-by-val?))
-  (conc func-name "("
-        (string-intersperse
-         (map (lambda (a)
-                (let ([argname (cadr a)])
-                  (assert (symbol? argname) (conc "foreign-function-call: "
-                                                  a " missing varname (symbol)"))
-                  (if (deref? a)
-                      (conc "*" argname)
-                      (conc argname))))
-              argdefs)
-         ", ") ")"))
-
 (define (make-variable argtype #!optional (rename gensym))
   (rename (argtype->symbol argtype)))
 
