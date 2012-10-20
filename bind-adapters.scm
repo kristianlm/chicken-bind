@@ -211,14 +211,21 @@
     ;; no match, skip & continue:
     (else #f)))
 
+(define *adapter-list*
+  '())
+
+(define (add-adapter adapter)
+  (set! *adapter-list* (cons adapter *adapter-list*)))
+
 ;; called on every (emit ...) from bind-translator
 (define (bind-adapt x)
   (fold (lambda (transformer result)
           (transform result transformer))
         x
-        (list foreign-lambda->foreign-lambda*
-              transform-struct-rtype
-              transform-struct-argtypes
-              transform-compile-foreign-lambda*)))
+        (append (list foreign-lambda->foreign-lambda*)
+                *adapter-list*
+                (list transform-struct-rtype
+                      transform-struct-argtypes
+                      transform-compile-foreign-lambda*))))
 
 )
