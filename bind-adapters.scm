@@ -21,6 +21,8 @@
 
                        transform
 
+                       foreign-type-pointer-target
+                       foreign-type-pointer?
                        foreign-type-struct-name
                        foreign-variable-type)
 
@@ -153,6 +155,9 @@
       [('c-pointer r) r]
       [('const r) (loop r)]
       [else #f])))
+
+(define (foreign-type-pointer? argtype)
+  (and (foreign-type-pointer-target argtype) #t))
 
 ;; (struct-by-val? '(struct "foo"))
 ;; (struct-by-val? '((const (struct "foo")) var1) )
