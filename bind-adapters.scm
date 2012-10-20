@@ -40,7 +40,7 @@
 (define (valid-C-varname s)
   (apply string (filter-map
                  (lambda (char)
-                   (cond 
+                   (cond
                     ((char-whitespace? char) #\_)
                     ((char-alphabetic? char) char)
                     ((char-numeric? char) char)
@@ -121,7 +121,7 @@
 (define (transform x transformer)
   (let loop ([x x])
     (let ([transformed (transformer x)])
-      (or transformed 
+      (or transformed
           (if (list? x)
               (map loop x)
               x)))))
