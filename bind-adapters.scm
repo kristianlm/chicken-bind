@@ -14,6 +14,7 @@
 
                        add-cexp-adapter
                        remove-all-cexp-adapters
+                       reset-adapters
 
                        foreign-lambda-family?
                        foreign-lambda*-family?
@@ -233,15 +234,21 @@
     ;; no match, skip & continue:
     (else #f)))
 
-(define *adapter-list*
+(define (default-adapters)
   (list transform-struct-rtype
-                      transform-struct-argtypes))
+        transform-struct-argtypes))
+
+(define *adapter-list*
+  (default-adapters))
 
 (define (add-adapter adapter)
   (set! *adapter-list* (cons adapter *adapter-list*)))
 
 (define (remove-all-adapters)
   (set! *adapter-list* '()))
+
+(define (reset-adapters)
+  (set! *adapter-list* (default-adapters)))
 
 
 (define *cexp-adapters*
