@@ -1,5 +1,8 @@
 ;;; This is a helper-module to bind which provides `adapters` and
-;;; helper functions to manipulate foreign argument types.
+;;; helper functions to manipulate foreign argument types. Often,
+;;; manually writing foreign-lambda* functions is the best option.
+;;; However, sometimes there are just too many foreign functions to do
+;;; this manually! That's when these adapters can be useful.
 
 ;;; Bind adapters are procedures that take a form as an argument and
 ;;; returns a new form or #f to not modify it.
