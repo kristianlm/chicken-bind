@@ -10,7 +10,7 @@
        ("chicken-bind" ("chicken-bind.scm" "bind-translator.so")
 	(compile  -O3 -d0 -S chicken-bind.scm) )
 
-       ("bind-translator.so" ("bind-translator.scm" "bind-adapters.so" "c.l.scm")
+       ("bind-translator.so" ("bind-translator.scm" "bind-adapters.import.so" "c.l.scm")
 	(compile  -sS -O3 -d0 bind-translator.scm -JS))
        ("bind-translator.import.so" ("bind-translator.so")
 	(compile  -s -O3 -d0 bind-translator.import.scm) )
