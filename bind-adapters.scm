@@ -128,17 +128,43 @@
               (map loop x)
               x)))))
 
-;; find the name of the struct in arg-def.
-;; arg-def eg: (const (struct "point")) => "point"
-(define (foreign-type-struct-name arg-def)
-  (let loop ((arg-def arg-def))
-    (match arg-def
+;; find the name of the struct in argtype. 
+;; (foreign-type-struct-name '(const (struct "point")))
+;; (foreign-type-struct-name '(c-pointer (struct "point")))
+;; (foreign-type-struct-name '(illagal (struct "point")))
+(define (foreign-type-struct-name argtype)
+  (let loop ((argtype argtype))
+    (match argtype
       [('struct sname) sname]
-      [('const ('struct sname))  sname]
-      [else (if (list? arg-def) (loop (car arg-def)) #f)])))
+      [('const x)  (loop x)]
+      [('c-pointer x) (loop x)]
+      [('nonnull-c-pointer x) (loop x)]
+      [else #f])))
 
-(define (struct-by-val? s)
-  (if (foreign-type-struct-name s) #t #f))
+;; return foreign type which is pointed to, #f if not a pointer
+;; todo: work with c-string's and friends
+;; (foreign-type-pointer? '(const (c-pointer int)))
+;; (foreign-type-pointer? '(const (c-pointer (struct "foo"))))
+;; (foreign-type-pointer? '(const (struct "foo")))
+(define (foreign-type-pointer-target argtype)
+  (let loop ((argtype argtype))
+    (match argtype
+      [('nonnull-c-pointer r) r]
+      [('c-pointer r) r]
+      [('const r) (loop r)]
+      [else #f])))
+
+;; (struct-by-val? '(struct "foo"))
+;; (struct-by-val? '((const (struct "foo")) var1) )
+;; (struct-by-val? '(c-pointer (struct "foo")))
+;; (struct-by-val? '((c-pointer (struct "foo")) var2))
+(define (struct-by-val? argdef)
+  (let ([argtype (if (list? (car argdef))
+                     (car argdef)
+                     argdef)])
+   (not (and (foreign-type-struct-name argtype)
+             (foreign-type-pointer-target argtype)
+             #t))))
 
 (define (make-variable argtype #!optional (rename gensym))
   (rename (argtype->symbol argtype)))
