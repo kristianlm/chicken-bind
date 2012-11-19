@@ -14,7 +14,7 @@
 ;;;
 ;;;
 ;;; foreign-lambda* forms can include `cexp` which is a very (very) limited
-;;; for of lisp-like C syntax. It is used to provide some semantical
+;;; form of lisp-like C syntax. It is used to provide some semantical
 ;;; abilities to foreign C-bodies. The last adapter converts this into
 ;;; normal C in the last step. See cexp->string for its grammar.
 ;;;
